@@ -120,6 +120,23 @@ function shine(c, x0, y0, x1, y1, cx, cy, w) {
   c.save(); c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo(ox, oy, x1, y1); c.quadraticCurveTo(ix, iy, x0, y0); c.closePath();
   c.fillStyle = 'rgba(255,255,255,.92)'; c.fill(); c.restore();
 }
+/* Trait d'encrage effilé : épais au milieu, pointu aux bouts (Bézier cubique). e = épaisseur relative aux extrémités */
+function taper(c, x0, y0, x1, y1, x2, y2, x3, y3, w, col, e0, e1) {
+  if (INKPASS) return;
+  const N = 16, A = [], B = []; e0 = e0 == null ? .12 : e0; e1 = e1 == null ? .12 : e1;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, u = 1 - t;
+    const x = u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3, y = u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3;
+    const dx = 3 * u * u * (x1 - x0) + 6 * u * t * (x2 - x1) + 3 * t * t * (x3 - x2), dy = 3 * u * u * (y1 - y0) + 6 * u * t * (y2 - y1) + 3 * t * t * (y3 - y2), l = Math.hypot(dx, dy) || 1;
+    const e = t < .5 ? e0 : e1, hw = w / 2 * (e + (1 - e) * Math.pow(Math.sin(Math.PI * t), .6));
+    A.push(x - dy / l * hw, y + dx / l * hw); B.push(x + dy / l * hw, y - dx / l * hw);
+  }
+  c.beginPath(); c.moveTo(A[0], A[1]);
+  for (let i = 2; i < A.length; i += 2) c.lineTo(A[i], A[i + 1]);
+  for (let i = B.length - 2; i >= 0; i -= 2) c.lineTo(B[i], B[i + 1]);
+  c.closePath(); c.fillStyle = col || OUTL; c.fill();
+}
+const tq = (c, x0, y0, cx, cy, x1, y1, w, col, e0, e1) => taper(c, x0, y0, x0 + (cx - x0) * 2 / 3, y0 + (cy - y0) * 2 / 3, x1 + (cx - x1) * 2 / 3, y1 + (cy - y1) * 2 / 3, x1, y1, w, col, e0, e1);
 const capBox = (x0, y0, x1, y1, r) => [Math.min(x0, x1) - r, Math.min(y0, y1) - r, Math.max(x0, x1) + r, Math.max(y0, y1) + r];
 
 function headPath(c) {
@@ -133,19 +150,21 @@ function headPath(c) {
 }
 /* Coiffures : polygones ; la frange est remontée (lift) pour dégager les grands yeux chibi */
 const liftFringe = (x, y) => (x > -10 && y > -11 ? [x, -11 + (y + 11) * .42] : [x, y]);
-/* Mèches courbes : chaque arête est une courbe bombée vers l'extérieur (pointes en flamme, comme un trait à la main) */
+/* Mèches vectorielles : arêtes courbées dans le sens du « coup de pinceau » (vers l'arrière en haut, vers le bas sur la frange) */
+const HC = [1, -6]; // centre du crâne
 const hairPoly = arr => {
   const P = []; for (let i = 0; i < arr.length; i += 2) P.push(liftFringe(arr[i], arr[i + 1]));
-  return c => {
-    c.moveTo(P[0][0], P[0][1]);
-    for (let i = 0; i < P.length; i++) {
-      const a = P[i], b = P[(i + 1) % P.length], mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-      const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1;
-      let nx = dy / len, ny = -dx / len; if (nx * (mx - 1) + ny * (my + 6) < 0) { nx = -nx; ny = -ny; }
-      const k = len * .14; c.quadraticCurveTo(mx + nx * k, my + ny * k, b[0], b[1]);
-    }
-    c.closePath();
-  };
+  const n = P.length, d = P.map(q => Math.hypot(q[0] - HC[0], q[1] - HC[1]));
+  const tips = P.filter((q, i) => d[i] > d[(i + n - 1) % n] && d[i] > d[(i + 1) % n]);
+  const segs = P.map((a, i) => {
+    const b = P[(i + 1) % n], mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1;
+    const S = my < -8 ? [-1, -.25] : mx > -4 ? [-.35, 1] : [-1, .4];
+    let nx = dy / len, ny = -dx / len; if (nx * S[0] + ny * S[1] < 0) { nx = -nx; ny = -ny; }
+    const k = len * .2; return [mx + nx * k, my + ny * k, b[0], b[1]];
+  });
+  const f = c => { c.moveTo(P[0][0], P[0][1]); for (const q of segs) c.quadraticCurveTo(q[0], q[1], q[2], q[3]); c.closePath(); };
+  f.tips = tips; return f;
 };
 const HAIR = {
   meches: hairPoly([-15, 10, -22, 6, -18, 0, -26, -6, -19, -11, -25, -20, -14, -20, -15, -30, -5, -24, 0, -32, 5, -24, 14, -29, 13, -20, 22, -19, 17, -12, 22, -5, 16, -5, 17, 2, 12, -4, 11, 3, 7, -5, 4, 1, 2, -7, -3, -2, -5, -9, -9, 3]),
@@ -159,20 +178,29 @@ function drawHairBack(c, L) {
   if (L.hair === 'queue') soft(c, cc => { cc.moveTo(-10, -18); cc.quadraticCurveTo(-32, -26, -35, 0); cc.quadraticCurveTo(-37, 16, -29, 26); cc.quadraticCurveTo(-29, 10, -23, 1); cc.quadraticCurveTo(-18, -9, -6, -11); cc.closePath(); }, L.hairColor, [-37, -26, -6, 26]);
 }
 function drawHairFront(c, L) {
-  const p = HAIR[L.hair] || HAIR.cap;
-  if (INKPASS) { soft(c, p, L.hairColor, HAIR_BOX, 1.9); return; }
-  // aplat + ombre propre sous la masse (pas de taches), puis reflets
-  c.beginPath(); p(c); c.fillStyle = L.hairColor; c.fill();
+  const p = HAIR[L.hair] || HAIR.cap, hc = L.hairColor;
+  if (INKPASS) { soft(c, p, hc, HAIR_BOX, 1.9); return; }
+  c.beginPath(); p(c); c.fillStyle = hc; c.fill();
   c.save(); c.beginPath(); p(c); c.clip();
-  c.fillStyle = mdk(L.hairColor); c.beginPath(); c.ellipse(4, 6, 30, 13, -.08, 0, TAU); c.fill();
-  c.beginPath(); c.ellipse(20, -12, 7, 16, .3, 0, TAU); c.fill();
-  // mèches internes à l'encre
-  c.strokeStyle = OUTL; c.lineWidth = 1.2; c.lineCap = 'round';
-  c.beginPath(); c.moveTo(-10, -18); c.quadraticCurveTo(-4, -12, -6, -5); c.moveTo(2, -22); c.quadraticCurveTo(6, -14, 4, -7); c.moveTo(11, -18); c.quadraticCurveTo(14, -12, 12, -6); c.stroke();
-  // reflets manga : bandes blanches courbes
-  shine(c, -15, -9, -4, -20, -12.5, -18.5, 3); shine(c, 1, -21, 8, -19.5, 4.8, -22.5, 2.4); shine(c, -17, -1, -15.5, -6, -17.8, -4.5, 1.6);
+  // ombre de masse : bas de la chevelure et côté nuque
+  c.fillStyle = mdk(hc); c.beginPath(); c.ellipse(4, 7, 30, 12, -.08, 0, TAU); c.fill();
+  c.beginPath(); c.ellipse(-22, -6, 9, 20, .2, 0, TAU); c.fill();
+  // mèches : un trait effilé vers chaque pointe
+  for (const q of p.tips || []) {
+    const ax = lerp(HC[0], q[0], .38), ay = lerp(HC[1], q[1], .38), bx = lerp(HC[0], q[0], .86), by = lerp(HC[1], q[1], .86);
+    tq(c, ax, ay, lerp(ax, bx, .5) - (by - ay) * .12, lerp(ay, by, .5) + (bx - ax) * .12, bx, by, 1.5, 'rgba(29,20,32,.85)', .05, .05);
+  }
+  // reflet : bande brillante qui suit le crâne, coupée naturellement par les mèches (clip)
+  // reflets : longues traînées blanches le long des plus grandes mèches du dessus
+  const top = (p.tips || []).filter(q => q[1] < -12).sort((u, w) => Math.hypot(w[0] - HC[0], w[1] - HC[1]) - Math.hypot(u[0] - HC[0], u[1] - HC[1])).slice(0, 4);
+  for (const q of top) {
+    const dx = q[0] - HC[0], dy = q[1] - HC[1], l = Math.hypot(dx, dy), px = -dy / l * 1.4, py = dx / l * 1.4;
+    const ax = HC[0] + dx * .44 + px, ay = HC[1] + dy * .44 + py, bx = HC[0] + dx * .8 + px * .4, by = HC[1] + dy * .8 + py * .4;
+    tq(c, ax, ay, (ax + bx) / 2 + px * .8, (ay + by) / 2 + py * .8, bx, by, 1.7, 'rgba(255,255,255,.92)', .05, .02);
+  }
+  shine(c, -15.5, -6, -7, -16.5, -13.5, -14, 1.8);
   c.restore();
-  c.beginPath(); p(c); c.lineWidth = 1.5; c.strokeStyle = OUTL; c.lineJoin = 'round'; c.stroke();
+  c.beginPath(); p(c); c.lineWidth = 1.4; c.strokeStyle = OUTL; c.lineJoin = 'round'; c.stroke();
 }
 function drawFace(c, v, t) {
   if (INKPASS) return;
@@ -182,9 +210,9 @@ function drawFace(c, v, t) {
   const eye = (x, w, hgt, near) => {
     const y = 2;
     if (ex === 'ko') { c.strokeStyle = OUTL; c.lineWidth = 1.9; c.beginPath(); c.moveTo(x - 2.6, y - 2.6); c.lineTo(x + 2.6, y + 2.6); c.moveTo(x + 2.6, y - 2.6); c.lineTo(x - 2.6, y + 2.6); c.stroke(); return; }
-    if (ex === 'grin') { c.strokeStyle = OUTL; c.lineWidth = 2.2; c.beginPath(); c.moveTo(x - w, y + 1.5); c.quadraticCurveTo(x, y - 3.5, x + w, y + 1.5); c.stroke(); return; }
+    if (ex === 'grin') { tq(c, x - w - .4, y + 1.8, x, y - 4.2, x + w + .4, y + 1.8, 2.6, OUTL, .2, .2); return; }
     if (ex === 'hurt') { c.strokeStyle = OUTL; c.lineWidth = 2; const d = near ? 1 : -1; c.beginPath(); c.moveTo(x - w * d, y - 2.4); c.lineTo(x + w * d * .9, y); c.lineTo(x - w * d, y + 2.4); c.stroke(); return; }
-    if (blink) { c.strokeStyle = OUTL; c.lineWidth = 2; c.beginPath(); c.moveTo(x - w, y + 1); c.quadraticCurveTo(x, y + 2.6, x + w, y + 1); c.stroke(); return; }
+    if (blink) { tq(c, x - w, y + 1, x, y + 2.8, x + w + .6, y + .4, 2.2, OUTL, .2, .3); return; }
     // blanc de l'oeil, grand iris, pupille, 2 reflets, cil épais
     c.beginPath(); c.ellipse(x, y, w, hgt, 0, 0, TAU); c.fillStyle = '#ffffff'; c.fill();
     c.save(); c.beginPath(); c.ellipse(x, y, w, hgt, 0, 0, TAU); c.clip();
@@ -194,15 +222,17 @@ function drawFace(c, v, t) {
     c.restore();
     c.fillStyle = '#fff'; c.beginPath(); c.ellipse(x - w * .2, y - hgt * .35, w * .34, hgt * .26, -.3, 0, TAU); c.fill();
     c.beginPath(); c.arc(x + w * .5, y + hgt * .45, w * .16, 0, TAU); c.fill();
-    c.beginPath(); c.ellipse(x, y, w, hgt, 0, 0, TAU); c.lineWidth = 1.1; c.strokeStyle = OUTL; c.stroke();
-    c.beginPath(); c.ellipse(x, y, w + .3, hgt + .2, 0, Math.PI * 1.08, Math.PI * 1.92); c.lineWidth = 2.6; c.stroke();
-    c.beginPath(); c.moveTo(x + w * .9, y - hgt * .55); c.lineTo(x + w * 1.45, y - hgt * .85); c.lineWidth = 1.6; c.stroke();
+    c.beginPath(); c.ellipse(x, y, w, hgt, 0, Math.PI * .1, Math.PI * .9); c.lineWidth = .8; c.strokeStyle = OUTL; c.stroke();
+    // paupière supérieure épaisse et effilée, avec un cil qui s'échappe vers l'extérieur
+    taper(c, x - w - .5, y - hgt * .1, x - w * .7, y - hgt - 1.6, x + w * .7, y - hgt - 1.8, x + w + .9, y - hgt * .35, 3, OUTL, .35, .3);
+    tq(c, x + w * .7, y - hgt * .7, x + w * 1.3, y - hgt * 1.05, x + w * 1.7, y - hgt * 1.15, 1.6, OUTL, .6, .05);
+    tq(c, x + w * .1, y + hgt + .2, x + w * .6, y + hgt, x + w * .95, y + hgt * .5, 1, OUTL, .05, .3);
   };
   eye(4.4, 2.9, 5, false); eye(11.9, 3.5, 5.5, true);
   // sourcils épais
-  c.strokeStyle = OUTL; c.lineWidth = 1.7;
   const fr = ex === 'hurt' ? 1.4 : 0;
-  c.beginPath(); c.moveTo(2.4, -5 + fr); c.lineTo(6.2, -4.8 - fr * .5); c.moveTo(9.4, -5.2 - fr * .5); c.lineTo(14.8, -5.8 + fr); c.stroke();
+  tq(c, 2, -4.6 + fr, 4.2, -6.2, 6.4, -5 - fr * .5, 2, OUTL, .5, .1);
+  tq(c, 9, -5.2 - fr * .5, 12, -7.2, 15.2, -5.6 + fr, 2.2, OUTL, .5, .1);
   // nez
   c.lineWidth = 1.1; c.beginPath(); c.moveTo(17, 6.4); c.lineTo(16.3, 7.4); c.stroke();
   // bouche
@@ -212,18 +242,28 @@ function drawFace(c, v, t) {
     c.beginPath(); mo(c); c.fillStyle = '#7a1e2c'; c.fill();
     c.save(); c.beginPath(); mo(c); c.clip(); c.beginPath(); c.ellipse(11.8, 10 + 4.8 * open, 3, 2, 0, 0, TAU); c.fillStyle = '#ff7c86'; c.fill(); c.restore();
     c.beginPath(); mo(c); c.lineWidth = 1.5; c.strokeStyle = OUTL; c.stroke();
-  } else { c.lineWidth = 1.6; c.beginPath(); c.moveTo(10.4, 11.2); c.quadraticCurveTo(12.2, 12, 14, 10.8); c.stroke(); }
+  } else tq(c, 10, 11, 12.2, 12.4, 14.4, 10.6, 1.8, OUTL, .1, .3);
   // rougeurs hachurées
-  c.fillStyle = 'rgba(255,110,120,.35)'; c.beginPath(); c.ellipse(8.6, 8.4, 2.8, 1.4, 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(16, 8, 1.4, 1.3, 0, 0, TAU); c.fill();
-  c.strokeStyle = 'rgba(220,60,80,.7)'; c.lineWidth = .8;
-  c.beginPath(); for (let i = 0; i < 3; i++) { c.moveTo(7 + i * 1.4, 9.3); c.lineTo(8 + i * 1.4, 7.5); } c.stroke();
+  c.fillStyle = 'rgba(255,110,120,.35)'; c.beginPath(); c.ellipse(8.6, 8.4, 2.8, 1.4, 0, 0, TAU); c.fill();
+  for (let i = 0; i < 3; i++) tq(c, 7 + i * 1.4, 9.4, 7.6 + i * 1.4, 8.4, 8.2 + i * 1.4, 7.4, .9, 'rgba(220,60,80,.8)', .2, .2);
 }
 const L_eyes = v => v.look.eyes || '#7a4a2a';
 function drawHead(c, v, t) {
   const L = v.look;
-  soft(c, headPath, L.skin, [-12, -16, 14, 16], 1.7);
-  soft(c, Pth.ellipse(-6.2, 4.8, 2, 2.7), L.skin, [-9, 1, -4, 8], 1);
-  if (!INKPASS) { c.strokeStyle = mdk(L.skin); c.lineWidth = .9; c.beginPath(); c.arc(-6.2, 4.9, 1, -1, 1.2); c.stroke(); }
+  if (INKPASS) soft(c, headPath, L.skin, [-12, -16, 14, 16], 1.7);
+  else {
+    c.beginPath(); headPath(c); c.fillStyle = L.skin; c.fill();
+    c.save(); c.beginPath(); headPath(c); c.clip();
+    // ombre portée de la frange sur le front + ombre côté nuque et sous la joue
+    const hp = HAIR[L.hair] || HAIR.cap;
+    c.save(); c.beginPath(); c.rect(-7, -30, 30, 28.5); c.clip(); c.translate(.8, 2.4); c.beginPath(); hp(c); c.fillStyle = mdk(L.skin); c.fill(); c.restore();
+    c.fillStyle = mdk(L.skin); c.beginPath(); c.ellipse(-15, 6, 6, 12, .2, 0, TAU); c.fill();
+    c.beginPath(); c.ellipse(4, 19, 14, 5, -.1, 0, TAU); c.fill();
+    c.restore();
+    c.beginPath(); headPath(c); c.lineWidth = 1.3; c.strokeStyle = OUTL; c.stroke();
+  }
+  soft(c, Pth.ellipse(-6.2, 4.8, 2.2, 2.9), L.skin, [-9, 1, -4, 8], 1);
+  tq(c, -6.4, 3, -4.6, 4.6, -6.2, 6.6, 1, mdk(mdk(L.skin)), .2, .2);
   drawFace(c, v, t);
   drawHairFront(c, L);
   if (v.boss) {
@@ -293,7 +333,9 @@ function drawFighter1(c, v, t) {
     // gros poing chibi + jointures
     const fr = (v.gear.weapon === 'poings' && front ? 7 : 6.2) * bw;
     soft(c, Pth.circle(hx, hy, fr), sk, [hx - fr, hy - fr, hx + fr, hy + fr], 1.5);
-    c.strokeStyle = OUTL; c.lineWidth = .9; c.beginPath(); c.arc(hx, hy, fr * .55, -.6, .9); c.stroke();
+    // doigts repliés : 3 traits effilés + pouce
+    for (let i = 0; i < 3; i++) { const a = -.5 + i * .5; tq(c, hx + Math.cos(a) * fr * .25, hy + Math.sin(a) * fr * .25, hx + Math.cos(a + .2) * fr * .6, hy + Math.sin(a + .2) * fr * .6, hx + Math.cos(a) * fr * .92, hy + Math.sin(a) * fr * .92, .9, OUTL, .1, .4); }
+    tq(c, hx - fr * .6, hy - fr * .2, hx - fr * .1, hy - fr * .75, hx + fr * .5, hy - fr * .55, 1, OUTL, .2, .2);
     if (front && v.gear.armor === 'plaques') { const pa = cc => { cc.arc(sx + 1, -22, 9.5 * bw, Math.PI * 1.02, Math.PI * 2.1); cc.closePath(); }; soft(c, pa, STEEL, [sx - 9, -32, sx + 10, -20]); trim(c, pa, v.gear.aRar); }
     if (front && v.gear.armor === 'cuir') soft(c, Pth.ellipse(sx + 1, -23, 7 * bw, 4.6, -.2), '#8a5530', [sx - 6, -28, sx + 8, -18]);
   };

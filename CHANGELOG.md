@@ -5,6 +5,12 @@ Règle : on développe en continu (dépôt GitHub + page de test Claude). Une **
 ## Non publié (en cours)
 - (rien)
 
+## 0.5.2
+- Dessin vectoriel : traits d'encrage effilés (épais au centre, pointus aux bouts) pour cils, sourcils, bouche, mèches, doigts
+- Mèches courbées dans le sens du pinceau, traînées de reflet le long des grandes mèches
+- Ombre portée de la frange sur le front, ombre de nuque et sous la joue
+- Poings avec doigts repliés et pouce
+
 ## 0.5.1
 - Style chibi manga : tête x1,45, trait encre épais en silhouette et fin à l'intérieur, ombres franches, reflets brillants sur les cheveux, grands yeux à reflets, rougeurs hachurées, mèches courbes
 - Kimono croisé à manches courtes, ceinture nouée, pantalon bouffant à plis, bottes, gros poings ; pose de victoire poings serrés
