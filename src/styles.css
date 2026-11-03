@@ -297,3 +297,10 @@ h1, h2, h3 { margin: 0; font-family: var(--f-display); font-weight: 400; letter-
 .fight .flog { flex: none; }
 .cta { position: sticky; bottom: -18px; z-index: 3; margin-bottom: -6px; padding: 8px 0 10px; background: linear-gradient(rgba(190,230,190,0), rgba(170,222,160,.92) 40%); }
 .cta > .btn { width: 100%; }
+
+.tile .dl { position: absolute; top: 2px; left: 3px; font-family: var(--f-display); font-size: 12px; line-height: 1; padding: 2px 4px; border-radius: 6px; }
+.tile .dl.pos { background: #21a35a; color: #fff; border: 1.5px solid var(--ink); }
+.tile .dl.neg { color: rgba(42,31,61,.45); font-size: 11px; }
+.loot .dl { font-family: var(--f-display); font-size: 14px; padding: 2px 6px; border-radius: 7px; white-space: nowrap; }
+.loot .dl.pos { background: #21a35a; color: #fff; border: 2px solid var(--ink); }
+.loot .dl.neg { color: var(--muted-ink); font-size: 12px; }

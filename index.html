@@ -309,6 +309,13 @@ h1, h2, h3 { margin: 0; font-family: var(--f-display); font-weight: 400; letter-
 .cta { position: sticky; bottom: -18px; z-index: 3; margin-bottom: -6px; padding: 8px 0 10px; background: linear-gradient(rgba(190,230,190,0), rgba(170,222,160,.92) 40%); }
 .cta > .btn { width: 100%; }
 
+.tile .dl { position: absolute; top: 2px; left: 3px; font-family: var(--f-display); font-size: 12px; line-height: 1; padding: 2px 4px; border-radius: 6px; }
+.tile .dl.pos { background: #21a35a; color: #fff; border: 1.5px solid var(--ink); }
+.tile .dl.neg { color: rgba(42,31,61,.45); font-size: 11px; }
+.loot .dl { font-family: var(--f-display); font-size: 14px; padding: 2px 6px; border-radius: 7px; white-space: nowrap; }
+.loot .dl.pos { background: #21a35a; color: #fff; border: 2px solid var(--ink); }
+.loot .dl.neg { color: var(--muted-ink); font-size: 12px; }
+
 </style>
 </head>
 <body>
@@ -316,7 +323,7 @@ h1, h2, h3 { margin: 0; font-family: var(--f-display); font-weight: 400; letter-
 <script>
 /* ---- 00-core.js ---- */
 'use strict';
-const GAME_VERSION = '0.5.2'; // incrémenté à chaque release (voir CHANGELOG.md)
+const GAME_VERSION = '0.5.3'; // incrémenté à chaque release (voir CHANGELOG.md)
 /* ===== CORE : utilitaires partagés (logique + rendu) ===== */
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -2211,7 +2218,7 @@ function itemTile(it, o) {
   return h('button', { class: 'tile', style: { '--rbg': rarityBg(it.rarity), borderColor: it.rarity ? mix(RARITIES[it.rarity].color, '#2a1f3d', .35) : null }, onclick: o.onclick, 'aria-label': it.name },
     (() => { const ic = icon(itemIcon(it), o.size || 34); if (it.slot === 'pet') ic.style.color = (bossPetDef(it) || PETS[it.species]).col; return ic; })(),
     h('span', { class: 'lv num' }, it.ilvl),
-    o.up ? h('span', { class: 'up' }, '▲') : null,
+    o.delta != null ? h('span', { class: 'dl num ' + (o.delta > 0 ? 'pos' : 'neg') }, o.delta > 0 ? '▲' + fmt(o.delta) : o.delta < 0 ? '▼' : '=') : o.up ? h('span', { class: 'up' }, '▲') : null,
     it.isNew && o.showNew ? h('span', { class: 'new' }) : null);
 }
 
@@ -2375,7 +2382,7 @@ function endRun(reason) {
   const levels = grantXp(S.hero, kept);
   S.lastRun = { reason, start: run.start, reached: run.floor - (reason === 'death' ? 0 : 1), wins: run.wins, xp: kept, xpLost: run.xp - kept, from, to: S.hero.level, points: levels * POINTS_PER_LEVEL, lost, secured };
   S.run = null; S.tips.start = 1;
-  if (S.autoEquip !== false) S.lastRun.equipped = autoEquipAll();
+  if (S.autoEquip !== false) { const r = optimizeAll(S.autoSell === false ? -1 : 1); S.lastRun.equipped = r.eq; S.lastRun.sold = r.sold; S.lastRun.soldXp = r.xp; if (r.lv) { S.lastRun.to = S.hero.level; S.lastRun.points += r.lv * POINTS_PER_LEVEL; } }
   if (S.autoAlloc && S.hero.points) { alloc = { str: 0, agi: 0, spd: 0, end: 0 }; autoAlloc(S.hero.points); for (const k of STAT_KEYS) S.hero.base[k] += alloc[k]; S.hero.points = 0; alloc = null; }
   save();
 }
@@ -2429,11 +2436,25 @@ function autoEquipAll() {
   }
   return n;
 }
-function salvage(it) {
+/* L'XP de démantèlement va directement au héros (jamais dans le pot du run : elle n'est pas en jeu) */
+function salvage(it, quiet) {
   S.inv.splice(S.inv.indexOf(it), 1); const v = salvageValue(it);
-  if (S.run) S.run.xp += v; else grantXp(S.hero, v);
-  save(); Sfx.play('xp'); return v;
+  const lv = grantXp(S.hero, v);
+  if (!quiet) { save(); Sfx.play(lv ? 'level' : 'xp'); if (lv) setTimeout(() => toast(`Niveau ${S.hero.level} ! +${lv * POINTS_PER_LEVEL} points`), 900); }
+  return v;
 }
+/* Objets inutiles : moins bons que l'équipement actuel. On garde les légendaires, les familiers de boss,
+   et les familiers tant qu'aucun emplacement n'est ouvert. */
+const junk = () => S.inv.filter(it => deltaFor(it) <= 0 && it.rarity < 3 && !it.bossPet && (it.slot !== 'pet' || petSlots(S.hero.level) > 0) &&
+  !(it.slot === 'pet' && S.pets.slice(0, petSlots(S.hero.level)).filter(Boolean).length < petSlots(S.hero.level)));
+/* Tout optimiser en 1 tap : équipe le meilleur, puis démantèle l'inutile. Renvoie {eq, sold, xp, lv} */
+function optimizeAll(maxRarity) {
+  const L0 = S.hero.level, eq = autoEquipAll();
+  let sold = 0, xp = 0;
+  for (const it of junk()) if (it.rarity <= maxRarity) { xp += salvage(it, true); sold++; }
+  return { eq, sold, xp, lv: S.hero.level - L0, to: S.hero.level };
+}
+const optText = r => [r.eq ? `${r.eq} équipé${r.eq > 1 ? 's' : ''}` : null, r.sold ? `${r.sold} démantelé${r.sold > 1 ? 's' : ''} (+${fmt(r.xp)} XP)` : null, r.lv ? `niveau ${r.to} !` : null].filter(Boolean).join(' · ');
 
 /* ---------- Rendu racine ---------- */
 function render() {
@@ -2470,6 +2491,7 @@ function openOptions() {
     h('button', { class: 'btn btn-stone', onclick: () => { S.music = S.music === false; Music.setOn(S.music); save(); close(); openOptions(); } }, icon(S.music !== false ? 'sound' : 'mute', 20), S.music !== false ? 'Musique : oui' : 'Musique : non'),
     h('button', { class: 'btn btn-stone', onclick: () => { S.sound = !S.sound; Sfx.on = S.sound; save(); close(); openOptions(); } }, icon(S.sound ? 'sound' : 'mute', 20), S.sound ? 'Bruitages : oui' : 'Bruitages : non'),
     h('button', { class: 'btn btn-stone', onclick: () => { S.autoEquip = S.autoEquip === false; save(); close(); openOptions(); } }, S.autoEquip !== false ? 'Équiper le meilleur après un run : oui' : 'Équiper le meilleur après un run : non'),
+    h('button', { class: 'btn btn-stone', onclick: () => { S.autoSell = S.autoSell === false; save(); close(); openOptions(); } }, S.autoSell !== false ? 'Démanteler l\'inutile (commun, peu commun) : oui' : 'Démanteler l\'inutile (commun, peu commun) : non'),
     h('button', { class: 'btn btn-stone', onclick: () => { S.autoAlloc = !S.autoAlloc; save(); close(); openOptions(); } }, S.autoAlloc ? 'Répartir les points tout seul : oui' : 'Répartir les points tout seul : non'),
     h('div', { class: 'row' }, h('button', { class: 'btn btn-sm btn-stone grow', onclick: () => { close(); openSaveIO(); } }, 'Sauvegarde'), h('button', { class: 'btn btn-sm btn-blood grow', onclick: () => { close(); confirmReset(); } }, 'Recommencer')),
     h('div', { class: 'label', style: { textAlign: 'center' } }, `Climbrawl v${GAME_VERSION}`),
@@ -2594,7 +2616,7 @@ function runSummary(L, compact) {
       h('div', null, h('span', null, 'XP'), h('b', null, '+' + fmt(L.xp) + (L.xpLost ? ` (−${fmt(L.xpLost)})` : ''))),
       h('div', null, h('span', null, 'Niveau'), h('b', null, L.to > L.from ? `${L.from} → ${L.to}` : L.to)),
       h('div', null, h('span', null, 'Butin'), h('b', null, L.reason === 'death' ? (L.lost ? `${L.lost} perdu${L.lost > 1 ? 's' : ''}` : '0') : `${L.secured} gardé${L.secured > 1 ? 's' : ''}`))),
-    L.equipped ? h('div', { style: { fontSize: '13px', color: '#21a35a' } }, `${L.equipped} objet${L.equipped > 1 ? 's' : ''} plus fort${L.equipped > 1 ? 's' : ''} équipé${L.equipped > 1 ? 's' : ''} automatiquement.`) : null,
+    L.equipped || L.sold ? h('div', { style: { fontSize: '13px', color: '#21a35a' } }, [L.equipped ? `${L.equipped} objet${L.equipped > 1 ? 's' : ''} plus fort${L.equipped > 1 ? 's' : ''} équipé${L.equipped > 1 ? 's' : ''}` : null, L.sold ? `${L.sold} objet${L.sold > 1 ? 's' : ''} inutile${L.sold > 1 ? 's' : ''} démantelé${L.sold > 1 ? 's' : ''} (+${fmt(L.soldXp)} XP)` : null].filter(Boolean).join(' · ') + '. Automatique.') : null,
     S.hero.points || S.hero.tp || S.hero.choices ? h('button', { class: 'btn btn-sm btn-soul', onclick: () => { tab = 'heros'; heroSub = S.hero.points || S.hero.choices ? 'stats' : 'tech'; render(); } },
       [S.hero.points ? `${S.hero.points} points` : null, S.hero.tp ? `${S.hero.tp} technique${S.hero.tp > 1 ? 's' : ''}` : null, S.hero.choices ? 'Choix de la Brute' : null].filter(Boolean).join(' · ')) : null);
 }
@@ -2678,7 +2700,7 @@ function lootRow(it, i, locked) {
     h('div', { style: { minWidth: 0 } },
       h('b', { style: { color: it.rarity ? mix(RARITIES[it.rarity].color, '#2a1f3d', .35) : 'var(--ink)' } }, it.name),
       h('small', null, `${itemTypeName(it)} · ${RARITIES[it.rarity].name}${ms ? ' · ' + ms.k + ' ' + ms.v : ''}`)),
-    locked ? icon('lock', 20) : null);
+    (() => { const d = deltaFor(it); return h('span', { class: 'dl num ' + (d > 0 ? 'pos' : 'neg') }, d > 0 ? `▲ +${fmt(d)}` : 'moins bon'); })());
 }
 function showVictory(out, fp, root) {
   Sfx.play('xp');
@@ -2862,10 +2884,13 @@ function confirmReset() {
 /* ---------- Onglet Sac ---------- */
 function tabBag() {
   const sc = h('div', { class: 'scroll' });
-  const ups = upgrades();
-  if (ups.length) sc.append(h('button', { class: 'btn btn-gold', onclick: () => { const n = autoEquipAll(); save(); Sfx.play('level'); toast(`${n} objet${n > 1 ? 's' : ''} équipé${n > 1 ? 's' : ''}`); render(); } }, `Équiper le meilleur · ${ups.length} amélioration${ups.length > 1 ? 's' : ''}`));
+  // aperçu exact de « Tout optimiser » : simulé sur une copie de la partie
+  let prev = null;
+  if (upgrades().length || junk().length) { const snap = JSON.stringify(S); prev = optimizeAll(2); S = JSON.parse(snap); }
+  if (prev && (prev.eq || prev.sold)) sc.append(h('button', { class: 'btn btn-gold', onclick: () => { const r = optimizeAll(2); save(); Sfx.play(r.lv ? 'level' : 'xp'); toast(optText(r) || 'Déjà optimal'); render(); } },
+    h('span', { class: 'col', style: { gap: '2px', alignItems: 'center' } }, 'Tout optimiser', h('small', { style: { fontFamily: 'var(--f-body)', fontSize: '12px' } }, optText(prev)))));
   if (S.run && S.run.loot.length) sc.append(h('div', { class: 'panel col' }, h('div', { class: 'row' }, icon('lock', 18), h('span', { class: 'label grow' }, `Butin du run · en jeu`)),
-    h('div', { class: 'grid' }, S.run.loot.map(it => itemTile(it, { onclick: () => openItem(it, null, true) })))));
+    h('div', { class: 'grid' }, S.run.loot.map(it => itemTile(it, { delta: deltaFor(it), onclick: () => openItem(it, null, true) })))));
   const slot = (key, label, ei) => h('div', null, itemTile(S.equip[key], { empty: label, emptyIcon: ei, onclick: () => S.equip[key] && openItem(S.equip[key], key) }), h('div', { class: 'slotlab' }, label));
   sc.append(h('div', { class: 'panel col' }, h('div', { class: 'label' }, 'Équipé'),
     h('div', { class: 'slots' }, slot('weapon', 'Arme', 'poings'), slot('armor', 'Armure', 'cuir'), slot('tal1', 'Talisman', 'amulette'), slot('tal2', 'Talisman', 'anneau'))));
@@ -2877,12 +2902,10 @@ function tabBag() {
   };
   sc.append(h('div', { class: 'panel col' }, h('div', { class: 'label' }, 'Familiers'), h('div', { class: 'slots three' }, petSlot(0), petSlot(1), petSlot(2))));
   const inv = S.inv.slice().sort((a, b) => (b.slot === 'pet') - (a.slot === 'pet') || b.rarity - a.rarity || b.ilvl - a.ilvl);
-  const commons = inv.filter(i => i.rarity === 0 && deltaFor(i) <= 0);
-  sc.append(h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'label num' }, `Sac · ${S.inv.length} / ${INV_MAX}`),
-    commons.length ? h('button', { class: 'btn btn-sm btn-stone', onclick: () => { let t = 0; commons.slice().forEach(i => { t += salvage(i); }); toast(`+${fmt(t)} XP`); render(); } }, `Démanteler ${commons.length} communs · +${fmt(commons.reduce((a, i) => a + salvageValue(i), 0))} XP`) : null));
-  if (inv.length) sc.append(h('div', { style: { fontSize: '12px', color: 'var(--muted-ink)' } }, h('b', { class: 'delta-up' }, '▲'), ' = plus fort que ce que tu portes. Touche un objet pour comparer stat par stat.'));
+  sc.append(h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'label num' }, `Sac · ${S.inv.length} / ${INV_MAX}`)));
+  if (inv.length) sc.append(h('div', { style: { fontSize: '12px', color: 'var(--muted-ink)' } }, h('b', { class: 'delta-up' }, '▲ +N'), ' = gain de puissance si tu l\'équipes. ▼ = moins bon que ce que tu portes.'));
   if (!inv.length) sc.append(h('div', { class: 'panel', style: { textAlign: 'center', color: 'var(--muted-ink)', fontSize: '14px', lineHeight: 1.5 } }, 'Ton sac est vide. Les étages lâchent armes, armures, talismans et familiers. Encaisse ton run pour les garder.'));
-  else sc.append(h('div', { class: 'grid' }, inv.map(it => itemTile(it, { up: deltaFor(it) > 0, showNew: true, onclick: () => openItem(it) }))));
+  else sc.append(h('div', { class: 'grid' }, inv.map(it => itemTile(it, { delta: deltaFor(it), showNew: true, onclick: () => openItem(it) }))));
   return sc;
 }
 /* Comparaison claire : ce qui est équipé vs ce qui le remplacerait, stat par stat */

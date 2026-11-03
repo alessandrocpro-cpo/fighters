@@ -5,7 +5,13 @@ Règle : on développe en continu (dépôt GitHub + page de test Claude). Une **
 ## Non publié (en cours)
 - (rien)
 
-## 0.5.2 — release publique (2026-11-03)
+## 0.5.3 — release publique (2026-11-03)
+- Sac : bouton « Tout optimiser » (équipe le meilleur partout, démantèle les objets moins bons ; aperçu exact du résultat sur le bouton)
+- Chaque objet affiche son gain de puissance (▲ +N) ou ▼ s'il est moins bon : plus besoin d'ouvrir chaque objet. Aussi sur l'écran de victoire
+- Après chaque run : équipement automatique + démantèlement auto des objets inutiles communs et peu communs (option). Légendaires et familiers de boss jamais démantelés automatiquement
+- Correctif : l'XP de démantèlement va directement au héros (avant, pendant un run, elle allait dans le pot du run et la moitié était perdue en cas de mort). Message de montée de niveau
+
+## 0.5.2 — release (2026-11-03)
 - Dessin vectoriel : traits d'encrage effilés (épais au centre, pointus aux bouts) pour cils, sourcils, bouche, mèches, doigts
 - Mèches courbées dans le sens du pinceau, traînées de reflet le long des grandes mèches
 - Ombre portée de la frange sur le front, ombre de nuque et sous la joue

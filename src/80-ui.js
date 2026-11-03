@@ -92,7 +92,7 @@ function itemTile(it, o) {
   return h('button', { class: 'tile', style: { '--rbg': rarityBg(it.rarity), borderColor: it.rarity ? mix(RARITIES[it.rarity].color, '#2a1f3d', .35) : null }, onclick: o.onclick, 'aria-label': it.name },
     (() => { const ic = icon(itemIcon(it), o.size || 34); if (it.slot === 'pet') ic.style.color = (bossPetDef(it) || PETS[it.species]).col; return ic; })(),
     h('span', { class: 'lv num' }, it.ilvl),
-    o.up ? h('span', { class: 'up' }, '▲') : null,
+    o.delta != null ? h('span', { class: 'dl num ' + (o.delta > 0 ? 'pos' : 'neg') }, o.delta > 0 ? '▲' + fmt(o.delta) : o.delta < 0 ? '▼' : '=') : o.up ? h('span', { class: 'up' }, '▲') : null,
     it.isNew && o.showNew ? h('span', { class: 'new' }) : null);
 }
 
