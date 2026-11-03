@@ -5,7 +5,7 @@ Règle : on développe en continu (dépôt GitHub + page de test Claude). Une **
 ## Non publié (en cours)
 - (rien)
 
-## 0.5.2
+## 0.5.2 — release publique (2026-11-03)
 - Dessin vectoriel : traits d'encrage effilés (épais au centre, pointus aux bouts) pour cils, sourcils, bouche, mèches, doigts
 - Mèches courbées dans le sens du pinceau, traînées de reflet le long des grandes mèches
 - Ombre portée de la frange sur le front, ombre de nuque et sous la joue
