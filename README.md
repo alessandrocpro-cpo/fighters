@@ -15,7 +15,7 @@ MVP jouable. Ouvrir `index.html` dans un navigateur (mobile ou desktop). Sauvega
 - **Collection** (onglet Héros) façon MyBrute : grille de tous les pouvoirs, armes, familiers et familiers de boss. Débloqué = tuile dorée, verrouillé = estompé, détail au toucher.
 
 ## Visuel
-Héros chibi style « flash » (grosse tête, corps trapu, pieds nus, gilet ouvert, dégradés doux, trait brun fin). Un monde lumineux par palier (prés, bois, canyon, neiges, jardins, lagon, arène, cendres, observatoire, sommet). Tout est dessiné en code.
+Héros chibi manga originaux (tête énorme, trait encre épais extérieur / fin intérieur, cel-shading franc, reflets, grands yeux, kimono croisé, ceinture nouée, bottes). Rendu canvas jusqu'à 3x. Un monde lumineux par palier (prés, bois, canyon, neiges, jardins, lagon, arène, cendres, observatoire, sommet). Tout est dessiné en code.
 
 ## Architecture (`src/`, assemblé par `node tools/build.mjs`)
 | Fichier | Rôle |

@@ -5,6 +5,11 @@ Règle : on développe en continu (dépôt GitHub + page de test Claude). Une **
 ## Non publié (en cours)
 - (rien)
 
+## 0.5.1
+- Style chibi manga : tête x1,45, trait encre épais en silhouette et fin à l'intérieur, ombres franches, reflets brillants sur les cheveux, grands yeux à reflets, rougeurs hachurées, mèches courbes
+- Kimono croisé à manches courtes, ceinture nouée, pantalon bouffant à plis, bottes, gros poings ; pose de victoire poings serrés
+- Rendu jusqu'à 3x la résolution de l'écran
+
 ## 0.5.0
 - Nom : Climbrawl
 - Combat interactif : coup parfait (x1,5) en tapant quand le cercle se ferme, parade (x0,3 dégâts) sur les coups dangereux signalés « ! »

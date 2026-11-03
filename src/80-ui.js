@@ -124,13 +124,13 @@ function toast(msg) {
 function portrait(ent, equip, face, cls) {
   const cv = h('canvas', { class: cls || '' });
   const v = makeView(ent, equip || {}, face === -1 ? 'R' : 'L', 0, 0);
-  attachPreview(cv, () => v, { zoom: 2.1, cy: -80 });
+  attachPreview(cv, () => v, { zoom: 1.75, cy: -92 });
   return cv;
 }
 function fullPreview(ent, equip, face, cls, zoom) {
   const cv = h('canvas', { class: cls || '' });
   const v = makeView(ent, equip || {}, face === -1 ? 'R' : 'L', 0, 0);
-  attachPreview(cv, () => v, { zoom: (zoom || 1) * .95, dy: 10 });
+  attachPreview(cv, () => v, { zoom: (zoom || 1) * .86, dy: 10 });
   cv._view = v;
   return cv;
 }

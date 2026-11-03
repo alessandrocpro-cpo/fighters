@@ -116,7 +116,7 @@ class FightPlayer {
   }
   impact(x, y, big) { if (!this.skipped) this.fx.push({ kind: 'impact', x, y, life: 0, max: big ? 220 : 160, s: big ? 1.5 : 1, rot: Math.random() * TAU }); }
   slashFx(v) { if (!this.skipped) this.fx.push({ kind: 'slash', x: v.x + v.face * 22, y: v.y - (v.kind === 'pet' ? 26 : 62), face: v.face, life: 0, max: 170, small: v.kind === 'pet' }); }
-  top(v) { return v.y - (v.kind === 'pet' ? 46 : 112 * v.scale); }
+  top(v) { return v.y - (v.kind === 'pet' ? 46 : 124 * v.scale); }
   chest(v) { return v.y - (v.kind === 'pet' ? 22 : 52 * v.scale); }
 
   loop(now) {
@@ -138,7 +138,7 @@ class FightPlayer {
     requestAnimationFrame(this.loop);
   }
   draw(now, dt) {
-    const cv = this.cv, dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cv = this.cv, dpr = Math.min(3, window.devicePixelRatio || 1);
     const w = cv.clientWidth, h = cv.clientHeight;
     if (!w || !h) return;
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }

@@ -389,7 +389,7 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
     F, heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, floor, speed: S.speed, tutorial: !S.tips.qte,
     orbVal: Math.max(2, Math.round(xpReward(floor) * .06)),
     onHp: hp => { for (const k in hp) { if (!bars[k]) continue; if (k.length === 1) setBar(bars[k], hp[k], U[k].max); else bars[k].firstChild.style.width = clamp(hp[k] / U[k].max, 0, 1) * 100 + '%'; } },
-    onLog: (t, sd) => { logBox.append(h('div', { class: sd }, t)); while (logBox.children.length > 3) logBox.firstChild.remove(); },
+    onLog: (t, sd) => { logBox.append(h('div', { class: sd }, t)); while (logBox.children.length > 2) logBox.firstChild.remove(); },
     onRage: F2 => {
       const r = F2.rage(); rage.style.width = r + '%'; rageTxt.textContent = r;
       for (const id in tbtns) { const b = tbtns[id], ok = F2.canUse(id); b.disabled = !ok && !fp.queue.includes(id); b.classList.toggle('ready', ok); b.style.setProperty('--p', Math.min(1, r / ACTIVES[id].cost)); if (!fp.queue.includes(id)) b.classList.remove('queued'); }
@@ -717,7 +717,7 @@ function renderCreate(app) {
   const rebuildView = () => { view = makeView({ look: st.look }, { weapon: starterWeapon(st.origin) }, 'L', 0, 0); };
   rebuildView();
   const prev = h('canvas', { class: 'create-prev' });
-  attachPreview(prev, () => view, { zoom: 1, dy: 12 });
+  attachPreview(prev, () => view, { zoom: .86, dy: 10 });
   const sc = h('div', { class: 'scroll' });
   const nameIn = h('input', { class: 'namein', id: 'heroname', maxlength: 14, 'aria-label': 'Nom du héros' }); nameIn.value = st.name;
   nameIn.addEventListener('input', () => { st.name = nameIn.value; });
