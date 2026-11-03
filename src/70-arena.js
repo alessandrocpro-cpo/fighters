@@ -88,6 +88,8 @@ class FightPlayer {
   constructor(canvas, o) {
     this.cv = canvas; this.o = o; this.speed = o.speed || 1; this.slow = 1;
     this.clock = 0; this.waits = []; this.tweens = []; this.fx = []; this.texts = []; this.shakeAmt = 0; this.skipped = false; this.alive = true;
+    this.F = o.F; this.qte = null; this.queue = []; this.orbs = []; this.orbXp = 0; this.orbN = 0;
+    this.onTap = ev => this.tap(ev); canvas.addEventListener('pointerdown', this.onTap);
     this.v = {};
     this.v.L = makeView(o.heroEnt, o.heroEquip, 'L', HOME_L, GROUND); this.v.L.name = o.heroEnt.name;
     this.v.R = makeView(o.enemy, o.enemy.equip, 'R', HOME_R, GROUND); this.v.R.name = o.enemy.name;
@@ -120,6 +122,9 @@ class FightPlayer {
   loop(now) {
     if (!this.alive) return;
     const rdt = Math.min(50, now - this.last); this.last = now;
+    if (this.qte && !this.qte.done) { this.qte.real += rdt; this.slow = .28; if (this.qte.real >= this.qte.dur) this.endQte(false); }
+    for (const o of this.orbs) { o.life += rdt; o.y += o.vy * rdt * (o.life < 400 ? 1 : .1); }
+    this.orbs = this.orbs.filter(o => !o.got && o.life < o.max);
     const dt = rdt * this.speed * this.slow;
     this.clock += dt;
     for (const tw of this.tweens.slice()) {
@@ -186,6 +191,7 @@ class FightPlayer {
         c.restore(); c.globalAlpha = 1;
       }
     }
+    this.drawOverlays(c, now);
     for (const tx of this.texts.slice()) {
       tx.life += dt; const k = tx.life / tx.max;
       if (k >= 1) { this.texts.splice(this.texts.indexOf(tx), 1); continue; }
@@ -198,6 +204,44 @@ class FightPlayer {
       c.restore();
     }
   }
+  drawOverlays(c, now) {
+    for (const id in this.v) {
+      const v = this.v[id];
+      if (v.shieldFx > 0) { v.shieldFx = Math.max(0, v.shieldFx - .004); c.save(); c.globalAlpha = .25 + .2 * Math.sin(now / 120); c.strokeStyle = '#8fe3ff'; c.lineWidth = 3; c.beginPath(); c.ellipse(v.x, this.chest(v) - 6, 40, 62, 0, 0, TAU); c.stroke(); c.restore(); }
+      if (this.F && id === 'L' && this.F.U.L.shield > 0 && !v.shieldFx) v.shieldFx = .6;
+      if (v.charge > 0) { c.save(); c.globalAlpha = .35 + .25 * Math.sin(now / 80); const g = c.createRadialGradient(v.x, this.chest(v), 4, v.x, this.chest(v), 60); g.addColorStop(0, 'rgba(255,170,80,.9)'); g.addColorStop(1, 'rgba(255,120,40,0)'); c.fillStyle = g; c.fillRect(v.x - 60, this.chest(v) - 60, 120, 120); c.restore(); }
+    }
+    for (const o of this.orbs) {
+      const k = o.life / o.max, a = k > .75 ? (1 - k) / .25 : 1, r = 11 + Math.sin(now / 160 + o.ph) * 1.5;
+      c.save(); c.globalAlpha = a;
+      const g = c.createRadialGradient(o.x, o.y, 2, o.x, o.y, r * 2.2); g.addColorStop(0, 'rgba(255,230,120,.9)'); g.addColorStop(1, 'rgba(255,200,60,0)'); c.fillStyle = g; c.beginPath(); c.arc(o.x, o.y, r * 2.2, 0, TAU); c.fill();
+      c.translate(o.x, o.y); c.rotate(now / 600 + o.ph); c.beginPath(); for (let i = 0; i < 10; i++) { const an = i * TAU / 10 - Math.PI / 2, rr = i % 2 ? r * .45 : r; c.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } c.closePath();
+      c.fillStyle = '#ffd84a'; c.fill(); c.lineWidth = 1.6; c.strokeStyle = INK; c.stroke(); c.restore();
+    }
+    const q = this.qte;
+    if (q && !q.done) {
+      const k = clamp(q.real / q.dur, 0, 1), inZone = k >= q.zone, parry = q.kind === 'parry';
+      const x = q.v.x, y = this.chest(q.v) - 4, R0 = 80, R1 = 25, rr = lerp(R0, R1, k), rz = lerp(R0, R1, q.zone);
+      const col = parry ? '#5fc8ff' : '#ffd84a';
+      c.save();
+      c.globalAlpha = .9; c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,.55)'; c.setLineDash([4, 5]); c.beginPath(); c.arc(x, y, rz, 0, TAU); c.stroke(); c.setLineDash([]);
+      c.lineWidth = inZone ? 6 : 4; c.strokeStyle = INK; c.beginPath(); c.arc(x, y, rr, 0, TAU); c.stroke();
+      c.lineWidth = inZone ? 3.5 : 2.2; c.strokeStyle = inZone ? '#ffffff' : col; c.beginPath(); c.arc(x, y, rr, 0, TAU); c.stroke();
+      c.beginPath(); c.arc(x, y, R1, 0, TAU); c.fillStyle = inZone ? col : 'rgba(255,255,255,.3)'; c.fill(); c.lineWidth = 2; c.strokeStyle = INK; c.stroke();
+      c.font = '13px "Lilita One", Impact, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.lineJoin = 'round'; c.lineWidth = 3.5; c.strokeStyle = INK; c.fillStyle = '#fff';
+      const word = parry ? 'PARE' : 'TAPE';
+      c.strokeText(word, x, y + 1); c.fillText(word, x, y + 1);
+      if (parry) { const fx = q.from.x, fy = this.top(q.from) - 22, bob = Math.sin(now / 70) * 2; c.font = '30px "Lilita One", Impact, sans-serif'; c.lineWidth = 6; c.strokeText('!', fx, fy + bob); c.fillStyle = '#ff5a4f'; c.fillText('!', fx, fy + bob); }
+      if (this.qteN <= 3 && this.o.tutorial) {
+        c.font = '13px "Lilita One", Impact, sans-serif'; c.lineWidth = 4; c.fillStyle = '#fff';
+        const t1 = parry ? 'COUP DANGEREUX !' : 'COUP PARFAIT', t2 = 'Tape quand le cercle se ferme';
+        c.font = '15px "Lilita One", Impact, sans-serif'; c.strokeText(t1, 200, 34); c.fillText(t1, 200, 34);
+        c.font = '12px "Lilita One", Impact, sans-serif'; c.strokeText(t2, 200, 52); c.fillText(t2, 200, 52);
+      }
+      c.restore();
+    }
+  }
   drawFlashed(c, v, now) {
     if (!this._off) this._off = document.createElement('canvas');
     const o = this._off; if (o.width !== this.cv.width || o.height !== this.cv.height) { o.width = this.cv.width; o.height = this.cv.height; }
@@ -206,29 +250,114 @@ class FightPlayer {
     oc.setTransform(1, 0, 0, 1, 0, 0); oc.globalCompositeOperation = 'source-atop'; oc.fillStyle = `rgba(255,255,255,${v.flash * .85})`; oc.fillRect(0, 0, o.width, o.height); oc.globalCompositeOperation = 'source-over';
     c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(o, 0, 0); c.restore();
   }
-  setHp(e) { if (e.hp) this.o.onHp && this.o.onHp(e.hp); }
+  setHp(hp) { if (hp) this.o.onHp && this.o.onHp(hp); }
   log(t, side) { this.o.onLog && this.o.onLog(t, side); }
+  sync() { this.o.onRage && this.o.onRage(this.F); }
 
-  async run() {
-    const ev = this.o.res.events;
-    this.text(200, 70, 'ÉTAGE ' + this.o.floor, '#ffffff', 24, -.004);
-    if (this.o.enemy.boss) { this.text(200, 100, this.o.enemy.title.toUpperCase(), '#ffd84a', 15, -.004); this.shake(5); Sfx.play('ko'); }
-    await this.wait(this.o.enemy.boss ? 900 : 500);
-    for (let i = 0; i < ev.length; i++) {
-      const e = ev[i], nx = ev[i + 1];
-      if (e.type === 'atk') await this.playAtk(e, nx);
-      else if (e.type === 'down') { const v = this.v[e.id]; setPose(v, 'ko', 8); v.expr = 'ko'; this.tween(v, 'alpha', .55, 500); this.log(`${v.name} est hors de combat.`, e.id[0]); }
-      else if (e.type === 'skill') {
-        const v = this.v[e.who]; v.glow = 1; this.setHp(e); Sfx.play('heal');
-        this.text(v.x, this.top(v) - 14, 'SECOND SOUFFLE', '#8dffb0', 15, -.02); this.text(v.x, this.top(v) + 10, '+' + e.heal, '#8dffb0', 20);
-        this.log(`${v.name} reprend son souffle (+${e.heal} PV).`, e.who[0]);
-        await this.wait(500);
-      } else if (e.type === 'regen') { const v = this.v[e.who]; this.setHp(e); this.text(v.x + 12, this.top(v) + 8, '+' + e.heal, '#8dffb0', 13); }
-      else if (e.type === 'end') await this.playEnd(e);
+  /* ----- Entrées joueur ----- */
+  arenaXY(ev) {
+    const r = this.cv.getBoundingClientRect(), dpr = this.cv.width / r.width;
+    return [((ev.clientX - r.left) * dpr - this.tf[1]) / this.tf[0], ((ev.clientY - r.top) * dpr - this.tf[2]) / this.tf[0]];
+  }
+  tap(ev) {
+    if (this.skipped || !this.tf) return;
+    const q = this.qte;
+    if (q && !q.done) {
+      const k = q.real / q.dur;
+      if (k >= q.zone) { this.endQte(true); }
+      else { this.endQte(false); this.text(q.v.x, this.top(q.v) - 30, 'TROP TÔT', '#ff9d9d', 15, -.02); }
+      return;
+    }
+    const [x, y] = this.arenaXY(ev);
+    for (const o of this.orbs) if (!o.got && Math.hypot(o.x - x, o.y - y) < 30) {
+      o.got = true; this.orbXp += o.val; Sfx.play('xp');
+      this.text(o.x, o.y - 10, '+' + o.val + ' XP', '#ffd84a', 17); this.burst(o.x, o.y, '#ffd84a', 10);
+      this.o.onOrb && this.o.onOrb(this.orbXp);
+      return;
     }
   }
-  async playAtk(e, nx) {
-    const A = this.v[e.a], D = this.v[e.d];
+  startQte(kind, v, from) {
+    if (this.skipped) return Promise.resolve(false);
+    this.qteN = (this.qteN || 0) + 1;
+    return new Promise(res => { this.qte = { kind, v, from, real: 0, dur: kind === 'parry' ? 760 : 680, zone: .52, res, done: false }; });
+  }
+  endQte(ok) {
+    const q = this.qte; if (!q || q.done) return;
+    q.done = true; this.qte = null; this.slow = 1;
+    if (ok) { Sfx.play(q.kind === 'parry' ? 'block' : 'crit'); this.o.onQte && this.o.onQte(q.kind); }
+    q.res(ok);
+  }
+  queueActive(id) { if (!this.queue.includes(id)) this.queue.push(id); }
+  spawnOrb(x, y) {
+    if (this.skipped || this.orbN >= 5) return;
+    this.orbN++;
+    this.orbs.push({ x: x + (Math.random() - .5) * 40, y: y - 30 - Math.random() * 30, vy: -.02, life: 0, max: 2600, val: this.o.orbVal || 5, got: false, ph: Math.random() * 6 });
+  }
+
+  /* ----- Boucle de combat interactive ----- */
+  async run() {
+    const F = this.F;
+    this.text(200, 70, 'ÉTAGE ' + this.o.floor, '#ffffff', 24, -.004);
+    if (this.o.enemy.boss) { this.text(200, 100, this.o.enemy.title.toUpperCase(), '#ffd84a', 15, -.004); this.shake(5); Sfx.play('ko'); }
+    this.sync();
+    await this.wait(this.o.enemy.boss ? 900 : 500);
+    let guard = 0;
+    while (!F.over && guard++ < 6000) {
+      if (this.skipped) { F.runAuto(); break; }
+      // techniques demandées par le joueur (ou automatiques si la rage déborde)
+      let acts = [];
+      while (this.queue.length) { const ev = F.useActive(this.queue.shift()); if (ev) acts.push(...ev); }
+      if (!acts.length && F.rage() >= RAGE.max) acts = F.autoActives();
+      for (const e of acts) await this.playEvent(e);
+      if (acts.length) this.sync();
+      if (F.over) break;
+      const n = F.next(); if (!n) break;
+      for (const e of n.events) await this.playEvent(e);
+      if (!n.strike) { this.sync(); continue; }
+      const input = await this.playWindup(n.strike);
+      const r = F.resolve(input);
+      for (const e of r.events) await this.playEvent(e);
+      this.sync();
+      await this.afterStrike(n.strike, r.cont);
+    }
+    const winner = F.winner || 'L';
+    if (this.skipped) this.finalize(); else await this.playEnd(winner);
+    return F.result([]);
+  }
+  async playEvent(e) {
+    if (e.type === 'atk') return this.playHit(e);
+    this.setHp(e.hp);
+    if (e.type === 'down') { const v = this.v[e.id]; setPose(v, 'ko', 8); v.expr = 'ko'; this.tween(v, 'alpha', .55, 500); this.log(`${v.name} est hors de combat.`, e.id[0]); if (e.id[0] === 'R') this.spawnOrb(v.x, v.y - 30); }
+    else if (e.type === 'skill') {
+      const v = this.v[e.who]; v.glow = 1; Sfx.play('heal');
+      this.text(v.x, this.top(v) - 14, 'SECOND SOUFFLE', '#8dffb0', 15, -.02); this.text(v.x, this.top(v) + 10, '+' + e.heal, '#8dffb0', 20);
+      this.log(`${v.name} reprend son souffle (+${e.heal} PV).`, e.who[0]);
+      await this.wait(500);
+    } else if (e.type === 'regen') { const v = this.v[e.who]; this.text(v.x + 12, this.top(v) + 8, '+' + e.heal, '#8dffb0', 13); }
+    else if (e.type === 'stunned') { const v = this.v[e.who]; v.stun = 1.2; this.text(v.x, this.top(v) - 20, 'SONNÉ', '#ffe066', 14, -.02); this.log(`${v.name} est sonné et perd son tour.`, e.who[0]); await this.wait(420); }
+    else if (e.type === 'active') await this.playActive(e);
+  }
+  async playActive(e) {
+    const H = this.v.L, R = this.v.R, A = ACTIVES[e.id];
+    H.glow = 1; setPose(H, 'windup', 18); Sfx.play('level'); this.slowmo(.4, 260);
+    this.text(H.x, this.top(H) - 22, A.name.toUpperCase(), '#ffd84a', 16, -.015);
+    this.log(`${H.name} : ${A.name}.`, 'L');
+    if (e.id === 'soin') { Sfx.play('heal'); this.text(H.x, this.top(H) + 6, '+' + e.heal, '#8dffb0', 22); }
+    else if (e.id === 'bouclier') H.shieldFx = 1;
+    else if (e.id === 'cri') { this.shake(8); R.stun = 2; this.text(R.x, this.top(R) - 16, 'ÉTOURDI', '#ffe066', 15, -.02); }
+    else if (e.id === 'devaste') { H.charge = 1; }
+    else if (e.id === 'brise') { this.burst(R.x, this.chest(R), '#cfd6de', 12); this.text(R.x, this.top(R) - 10, 'ARMURE BRISÉE', '#cfd6de', 13, -.02); }
+    else if (e.id === 'balayage') {
+      setPose(H, 'strike', 30); this.shake(6); Sfx.play('crit');
+      for (const t of e.hits) { const v = this.v[t.id]; v.flash = 1; setPose(v, 'hit', 30); this.impact(v.x, this.chest(v), false); this.text(v.x, this.top(v) + 4, String(t.dmg), '#ffffff', 20); }
+    }
+    this.setHp(e.hp);
+    await this.wait(420);
+    setPose(H, 'idle', 10);
+    for (const id in this.v) if (id[0] === 'R' && !this.v[id].pose.rot) setPose(this.v[id], 'idle', 10);
+  }
+  async playWindup(s) {
+    const A = this.v[s.a], D = this.v[s.d];
     const reach = (A.kind === 'pet' ? 30 : 44 + WEAPONS[A.gear.weapon].reach * .55) + (D.kind === 'pet' ? -6 : 0) + (D.boss ? 8 : 0);
     const tx = D.x - A.face * reach, ty = D.y + (D.kind === 'pet' ? -2 : 1);
     if (Math.abs(A.x - tx) > 6 || Math.abs(A.y - ty) > 6) {
@@ -236,10 +365,17 @@ class FightPlayer {
       await this.move(A, tx, ty, Math.hypot(A.x - tx, A.y - ty) / .55, Ease.linear);
       A.running = false;
     }
-    const sideA = e.a[0], sideD = e.d[0];
-    if (e.counter) { this.text(A.x, this.top(A) - 10, 'RIPOSTE', '#ffd84a', 14, -.02); this.log(`${A.name} riposte !`, sideA); }
-    setPose(A, 'windup', 24); await this.wait(A.kind === 'pet' ? 90 : 110);
-    setPose(A, 'strike', 42); this.slashFx(A); Sfx.play('swoosh');
+    if (s.counter) { this.text(A.x, this.top(A) - 10, 'RIPOSTE', '#ffd84a', 14, -.02); this.log(`${A.name} riposte !`, s.a[0]); }
+    setPose(A, 'windup', 24);
+    const input = {};
+    if (!this.skipped && s.heroStrike) { input.perfect = await this.startQte('perfect', D, A); }
+    else if (!this.skipped && s.telegraph) { Sfx.play('swoosh'); input.parry = await this.startQte('parry', D, A); }
+    else await this.wait(A.kind === 'pet' ? 90 : 110);
+    return input;
+  }
+  async playHit(e) {
+    const A = this.v[e.a], D = this.v[e.d], sideA = e.a[0], sideD = e.d[0];
+    setPose(A, 'strike', 42); this.slashFx(A); Sfx.play('swoosh'); A.charge = 0;
     await this.wait(55);
     const hx = D.x - D.face * 4, hy = this.chest(D);
     if (e.res === 'dodge') {
@@ -254,29 +390,34 @@ class FightPlayer {
       this.log(`${D.name} pare le coup.`, sideD);
       await this.wait(240);
     } else {
-      D.flash = 1; setPose(D, 'hit', 32); D.expr = 'hurt';
-      this.impact(hx, hy, e.crit || e.heavy); this.burst(hx, hy, e.crit ? '#ffd84a' : '#ffffff', e.crit ? 14 : 8);
-      this.shake(e.crit ? 7 : e.heavy ? 6 : 3.2);
-      Sfx.play(e.crit || e.heavy ? 'crit' : 'hit');
-      this.text(D.x + (Math.random() - .5) * 18, this.top(D) + 4, String(e.dmg), e.crit ? '#ffd84a' : '#ffffff', e.crit ? 30 : 22);
-      if (e.crit) { this.text(D.x, this.top(D) - 24, 'CRITIQUE', '#ffd84a', 15, -.02); this.slowmo(.35, 180); }
-      if (e.heavy) this.text(D.x, this.top(D) - 24, 'FRACAS', '#ff9d5c', 15, -.02);
+      const big = e.crit || e.heavy || e.perfect || e.devast;
+      if (e.parried) { setPose(D, 'block', 30); this.burst(hx, hy, '#bfe7ff', 14); this.text(D.x, this.top(D) - 26, 'PARÉ !', '#bfe7ff', 20, -.02); }
+      else { D.flash = 1; setPose(D, 'hit', 32); D.expr = 'hurt'; }
+      if (e.shielded) { D.shieldFx = 1; this.burst(hx, hy, '#8fe3ff', 10); }
+      this.impact(hx, hy, big); this.burst(hx, hy, e.crit || e.perfect ? '#ffd84a' : '#ffffff', big ? 14 : 8);
+      this.shake(e.devast ? 10 : big ? 7 : e.parried ? 2 : 3.2);
+      Sfx.play(big ? 'crit' : 'hit');
+      this.text(D.x + (Math.random() - .5) * 18, this.top(D) + 4, String(e.dmg), big ? '#ffd84a' : '#ffffff', big ? 30 : 22);
+      if (e.perfect) { this.text(D.x, this.top(D) - 26, 'PARFAIT !', '#ffd84a', 19, -.02); this.slowmo(.35, 200); if (Math.random() < .5) this.spawnOrb(D.x, D.y - 40); }
+      else if (e.devast) { this.text(D.x, this.top(D) - 26, 'DÉVASTATEUR', '#ff9d5c', 17, -.02); this.slowmo(.3, 260); }
+      else if (e.crit) { this.text(D.x, this.top(D) - 24, 'CRITIQUE', '#ffd84a', 15, -.02); this.slowmo(.35, 180); }
+      else if (e.heavy) this.text(D.x, this.top(D) - 24, 'FRACAS', '#ff9d5c', 15, -.02);
+      if (e.pierce) this.text(D.x, this.top(D) - 42, 'SANS ARMURE', '#cfd6de', 12, -.02);
       if (e.heal) this.text(A.x, this.top(A) + 4, '+' + e.heal, '#8dffb0', 16);
       if (e.thorns) { A.flash = .7; this.text(A.x, this.top(A), '-' + e.thorns, '#ff9d9d', 15); }
       if (e.stun) { D.stun = 1.6; this.text(D.x, this.top(D) - 34, 'ÉTOURDI', '#ffe066', 13, -.02); }
-      this.setHp(e);
-      this.log(`${A.name} frappe ${D.name} : ${e.dmg}${e.crit ? ' (critique)' : ''}${e.stun ? ', étourdi' : ''}.`, sideA);
+      this.setHp(e.hp);
+      this.log(`${A.name} frappe ${D.name} : ${e.dmg}${e.crit ? ' (critique)' : ''}${e.parried ? ' (paré)' : ''}${e.perfect ? ' (parfait)' : ''}.`, sideA);
       this.tween(D, 'x', D.x + A.face * 9, 90);
-      const dead = (e.hp.L === 0) || (e.hp.R === 0);
-      await this.wait(e.crit ? 280 : 210);
-      if (dead) return;
+      await this.wait(big ? 280 : 210);
     }
-    const sameNext = nx && nx.type === 'atk' && nx.a === e.a && nx.d === e.d && !nx.counter;
-    const counter = nx && nx.type === 'atk' && nx.counter;
-    const downNext = nx && nx.type === 'down';
-    if (sameNext) { this.text(A.x, this.top(A) - 10, 'ENCHAÎNEMENT', '#ffd84a', 12, -.02); setPose(D, 'idle', 8); D.expr = 'neutral'; return; }
-    if (counter) { setPose(A, 'idle', 12); D.expr = 'neutral'; return; }
-    if (!downNext || nx.id !== e.d) { setPose(D, 'idle', 8); D.expr = 'neutral'; }
+  }
+  async afterStrike(s, cont) {
+    const A = this.v[s.a], D = this.v[s.d];
+    if (this.F.over) return;
+    if (cont === 'combo') { this.text(A.x, this.top(A) - 10, 'ENCHAÎNEMENT', '#ffd84a', 12, -.02); if (!D.pose.rot) { setPose(D, 'idle', 8); D.expr = 'neutral'; } return; }
+    if (cont === 'counter') { setPose(A, 'idle', 12); D.expr = 'neutral'; return; }
+    if (!D.pose.rot) { setPose(D, 'idle', 8); D.expr = 'neutral'; }
     const back = v => {
       if (v.pose.rot) return Promise.resolve();
       if (Math.abs(v.x - v.homeX) < 4 && Math.abs(v.y - v.homeY) < 4) { setPose(v, 'idle', 10); return Promise.resolve(); }
@@ -288,8 +429,8 @@ class FightPlayer {
     await Promise.all([back(A), back(D)]);
     await this.wait(80);
   }
-  async playEnd(e) {
-    const W = e.winner, Lz = W === 'L' ? 'R' : 'L';
+  async playEnd(W) {
+    const Lz = W === 'L' ? 'R' : 'L';
     const lv = this.v[Lz];
     setPose(lv, 'ko', 7); lv.expr = 'ko'; lv.stun = 0;
     Sfx.play('ko'); this.shake(9); this.slowmo(.3, 650);
@@ -304,20 +445,21 @@ class FightPlayer {
     await this.wait(1100);
   }
   skip() {
-    this.skipped = true; this.texts = []; this.fx = [];
+    this.skipped = true; this.texts = []; this.fx = []; this.orbs = [];
+    if (this.qte) this.endQte(false);
     for (const tw of this.tweens) { tw.obj[tw.key] = tw.to; tw.res(); } this.tweens = [];
     for (const w of this.waits) w.res(); this.waits = [];
   }
   finalize() {
-    const ev = this.o.res.events, last = ev[ev.length - 1];
-    this.setHp(last);
+    const hp = this.F.snap(), W = this.F.winner;
+    this.setHp(hp);
     for (const id in this.v) {
-      const v = this.v[id]; v.running = false; v.x = v.homeX; v.y = v.homeY; v.face = id[0] === 'L' ? 1 : -1;
-      const dead = last.hp[id] === 0 || id === (last.winner === 'L' ? 'R' : 'L');
-      if (dead) { setPose(v, 'ko', 50); v.expr = 'ko'; } else if (id[0] === last.winner) { setPose(v, 'victory', 50); v.expr = 'grin'; } else setPose(v, 'idle', 50);
+      const v = this.v[id]; v.running = false; v.x = v.homeX; v.y = v.homeY; v.face = id[0] === 'L' ? 1 : -1; v.stun = 0; v.shieldFx = 0; v.charge = 0;
+      const dead = hp[id] === 0 || id === (W === 'L' ? 'R' : 'L');
+      if (dead) { setPose(v, 'ko', 50); v.expr = 'ko'; } else if (id[0] === W) { setPose(v, 'victory', 50); v.expr = 'grin'; } else setPose(v, 'idle', 50);
     }
   }
-  destroy() { this.alive = false; }
+  destroy() { this.alive = false; this.cv.removeEventListener('pointerdown', this.onTap); if (this.qte) this.endQte(false); }
 }
 /* ---------- Audio : synthé minimal, zéro fichier ---------- */
 const Sfx = {

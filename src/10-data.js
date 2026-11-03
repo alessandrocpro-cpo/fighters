@@ -141,3 +141,34 @@ const BOSS_PET_CHANCE = .06;
 const PET_SLOT_LEVELS = [5, 15, 30];
 const CHOICE_EVERY = 3;
 const DEATH_XP_KEEP = .5; // part de l'XP du run gardée si on tombe (le butin du run est perdu)
+
+/* Techniques actives : déclenchées par le joueur pendant le combat (jauge de rage). rang 1..3.
+   On en apprend plusieurs, on n'en emporte que ACTIVE_SLOTS par combat : le choix dépend de l'adversaire. */
+const ACTIVES = {
+  devaste:  { short: r => 'x' + [2.2, 2.6, 3][r - 1].toString().replace('.', ','), name: 'Coup dévastateur', cost: 50, counters: ['insaisissable', 'increvable'], base: 2, val: [2.2, 2.6, 3],
+    desc: r => `Ton prochain coup inflige x${[2.2, 2.6, 3][r - 1].toString().replace('.', ',')} dégâts et ne peut pas être esquivé.` },
+  brise:    { short: r => [2, 3, 4][r - 1] + ' coups', name: 'Brise-armure',     cost: 35, counters: ['cuirasse'], base: 1, val: [2, 3, 4],
+    desc: r => `Tes ${[2, 3, 4][r - 1]} prochains coups ignorent toute l'armure adverse.` },
+  bouclier: { short: r => '−' + [50, 65, 80][r - 1] + '%', name: 'Bouclier',         cost: 40, counters: ['frappe'], base: 1.5, val: [.5, .65, .8],
+    desc: r => `Les 2 prochains coups reçus perdent ${[50, 65, 80][r - 1]}% de leurs dégâts.` },
+  balayage: { short: r => 'x' + [0.8, 1.1, 1.4][r - 1].toString().replace('.', ','), name: 'Balayage',         cost: 45, counters: ['meute'], base: .6, val: [.8, 1.1, 1.4],
+    desc: r => `Frappe tous les familiers adverses (x${[0.8, 1.1, 1.4][r - 1].toString().replace('.', ',')} tes dégâts) et l'adversaire (moitié).` },
+  cri:      { short: r => ['1 tour', '1 tour, −10% dégâts', '2 tours'][r - 1], name: 'Cri de guerre',    cost: 45, counters: ['rapide'], base: 1.2, val: [1, 1, 2],
+    desc: r => `L'adversaire est étourdi et perd ${['son prochain tour', 'son prochain tour, et 10% de dégâts', 'ses 2 prochains tours'][r - 1]}.` },
+  soin:     { short: r => [22, 30, 38][r - 1] + '% PV', name: 'Second vent',      cost: 60, counters: ['increvable'], base: 1.2, val: [.22, .3, .38],
+    desc: r => `Soigne ${[22, 30, 38][r - 1]}% de tes PV max.` },
+};
+const activeSlots = level => level >= 20 ? 3 : 2;
+/* Traits d'adversaire : calculés à partir de ses vraies stats, affichés sur sa fiche */
+const TRAITS = {
+  insaisissable: { name: 'Insaisissable', desc: 'Esquive beaucoup.' },
+  cuirasse:      { name: 'Cuirassé',      desc: 'Armure épaisse.' },
+  frappe:        { name: 'Frappe lourde', desc: 'Coups critiques ou dévastateurs.' },
+  meute:         { name: 'Meute',         desc: 'Combat avec des familiers.' },
+  increvable:    { name: 'Increvable',    desc: 'Se soigne ou se relève.' },
+  rapide:        { name: 'Rapide',        desc: 'Frappe bien plus souvent que toi.' },
+};
+const ACTIVE_IDS = Object.keys(ACTIVES);
+const RAGE = { onStrike: 9, onHit: 13, max: 100 };
+const PERFECT_MULT = 1.5, PARRY_MULT = .3;
+const TP_EVERY = 2; // 1 point de technique au niveau 1, puis tous les 2 niveaux

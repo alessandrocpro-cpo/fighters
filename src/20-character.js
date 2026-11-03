@@ -2,7 +2,7 @@
 function newHero(name, look, origin) {
   const base = { str: 3, agi: 3, spd: 3, end: 3, hp: 0 };
   for (const k of STAT_KEYS) base[k] += ORIGINS[origin].stats[k];
-  return { name, look, origin, base, level: 1, xp: 0, points: 0, choices: 0, skills: [] };
+  return { name, look, origin, base, level: 1, xp: 0, points: 0, choices: 0, skills: [], tp: 0, actives: { devaste: 1 } };
 }
 
 /* Entité = { base, level, skills, boss? } + équipement { weapon, armor, tal1, tal2 } */
@@ -90,6 +90,7 @@ function grantXp(hero, amount) {
     hero.xp -= xpToNext(hero.level); hero.level++; gained++;
     hero.points += POINTS_PER_LEVEL;
     if (hero.level % CHOICE_EVERY === 0) hero.choices++;
+    if (hero.level % TP_EVERY === 0) hero.tp = (hero.tp || 0) + 1;
   }
   return gained;
 }
@@ -110,4 +111,33 @@ function choiceLabel(c) {
   if (c.type === 'pet') return { title: PETS[c.species].name, sub: 'Familier' + (c.rarity ? ' rare' : ''), desc: 'Combat à tes côtés. Les ennemis partagent leurs coups entre vous.' };
   if (c.type === 'hp') return { title: '+' + c.v + ' PV max', sub: 'Vigueur', desc: 'Plus de marge pour grimper loin.' };
   return { title: '+' + c.v + ' points', sub: 'Entraînement', desc: 'Points de stats bonus à répartir.' };
+}
+
+/* Techniques actives : 1 point = débloquer (rang 1) ou améliorer (jusqu'au rang 3) */
+const activeRank = (hero, id) => (hero.actives && hero.actives[id]) || 0;
+function learnActive(hero, id) {
+  if (!hero.actives) hero.actives = {};
+  if ((hero.tp || 0) < 1 || activeRank(hero, id) >= 3) return false;
+  hero.tp--; hero.actives[id] = activeRank(hero, id) + 1; return true;
+}
+function ensureHeroV3(hero) {
+  if (hero.actives == null) hero.actives = {};
+  if (hero.tp == null) hero.tp = 1 + Math.floor(hero.level / TP_EVERY);
+}
+
+function enemyTraits(en, heroSt) {
+  const es = computeStats(en, en.equip), t = [];
+  if (es.evade >= .2) t.push('insaisissable');
+  if (es.armor / (es.armor + 50) >= .16) t.push('cuirasse');
+  if (es.crit >= .16 || es.skills.includes('fracas') || es.skills.includes('colere')) t.push('frappe');
+  if (en.pets && en.pets.length) t.push('meute');
+  if (es.regen > 0 || es.skills.includes('souffle') || es.lifesteal >= .1) t.push('increvable');
+  if (heroSt && es.speed > heroSt.speed * 1.25) t.push('rapide');
+  return t;
+}
+/* Techniques conseillées : les plus utiles contre les traits de l'adversaire, parmi celles apprises */
+function recommendLoadout(hero, traits) {
+  const learned = ACTIVE_IDS.filter(id => activeRank(hero, id) > 0);
+  const score = id => ACTIVES[id].base + activeRank(hero, id) * .3 + (ACTIVES[id].counters.some(c => traits.includes(c)) ? 3 : 0);
+  return learned.sort((a, b) => score(b) - score(a)).slice(0, activeSlots(hero.level));
 }

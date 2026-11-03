@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VERSION = '0.4.0'; // incrémenté à chaque release Netlify (voir CHANGELOG.md)
+const GAME_VERSION = '0.5.0'; // incrémenté à chaque release (voir CHANGELOG.md)
 /* ===== CORE : utilitaires partagés (logique + rendu) ===== */
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);

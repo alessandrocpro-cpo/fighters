@@ -1,7 +1,7 @@
 /* ===== MAIN : état, sauvegarde, écrans ===== */
 const SAVE_KEY = 'fighters.save.v2';
 const INV_MAX = 60;
-let S = null, tab = 'tour', alloc = null;
+let S = null, tab = 'tour', alloc = null, heroSub = 'stats';
 let _enemies = {};
 
 function save() {
@@ -77,15 +77,24 @@ function ensureCodex() {
 }
 function newGame(name, look, origin) {
   S = { v: 2, world: (Math.random() * 1e9) | 0, hero: newHero(name, look, origin), equip: { weapon: starterWeapon(origin) }, pets: [null, null, null], inv: [],
-    portals: [1], best: 0, stats: { runs: 0, wins: 0, deaths: 0, fights: 0 }, run: null, lastRun: null, pendingChoice: null, tips: {}, sound: true, speed: 1, codex: { w: {}, p: {} } };
+    portals: [1], best: 0, stats: { runs: 0, wins: 0, deaths: 0, fights: 0 }, run: null, lastRun: null, pendingChoice: null, tips: {}, sound: true, speed: 2, autoEquip: true, codex: { w: {}, p: {} } };
   note(S.equip.weapon);
   save();
 }
+/* Techniques emportées contre l'adversaire d'un étage : choix du joueur, sinon conseil automatique */
+function curLoadout(f) {
+  const learned = ACTIVE_IDS.filter(id => activeRank(S.hero, id) > 0);
+  if (S.lo && S.lo.floor === f) return S.lo.ids.filter(id => learned.includes(id)).slice(0, activeSlots(S.hero.level));
+  const en = enemyAt(f);
+  return recommendLoadout(S.hero, enemyTraits(en, heroStats()));
+}
+const heroFor = f => Object.assign({}, S.hero, { loadout: curLoadout(f) });
+const startFloor = () => S.portals.includes(S._portalSel) ? S._portalSel : Math.max(...S.portals);
 
 /* ---------- Run rogue-lite ---------- */
 function startRun(from) {
   S.run = { start: from, floor: from, hp: heroStats().maxHp, flasks: 3, xp: 0, loot: [], wins: 0 };
-  S.stats.runs++; save();
+  S.lastRun = null; S.stats.runs++; save();
 }
 function secureLoot() {
   const run = S.run; let overflow = 0;
@@ -102,12 +111,16 @@ function endRun(reason) {
   const kept = reason === 'death' ? Math.floor(run.xp * DEATH_XP_KEEP) : run.xp;
   const levels = grantXp(S.hero, kept);
   S.lastRun = { reason, start: run.start, reached: run.floor - (reason === 'death' ? 0 : 1), wins: run.wins, xp: kept, xpLost: run.xp - kept, from, to: S.hero.level, points: levels * POINTS_PER_LEVEL, lost, secured };
-  S.run = null; save();
+  S.run = null; S.tips.start = 1;
+  if (S.autoEquip !== false) S.lastRun.equipped = autoEquipAll();
+  if (S.autoAlloc && S.hero.points) { alloc = { str: 0, agi: 0, spd: 0, end: 0 }; autoAlloc(S.hero.points); for (const k of STAT_KEYS) S.hero.base[k] += alloc[k]; S.hero.points = 0; alloc = null; }
+  save();
 }
 function applyOutcome(en, res) {
   const run = S.run, floor = run.floor, st = heroStats();
   S.stats.fights++;
-  const out = { floor, win: res.winner === 'L', boss: en.boss };
+  const out = { floor, win: res.winner === 'L', boss: en.boss, orbXp: res.orbXp || 0 };
+  run.xp += out.orbXp;
   if (!out.win) { S.stats.deaths++; out.lostLoot = run.loot.length; endRun('death'); return out; }
   S.stats.wins++; run.wins++;
   out.xp = Math.round(xpReward(floor) * (1 + st.xpBonus)); run.xp += out.xp;
@@ -135,12 +148,23 @@ function deltaFor(it, slot) {
   return computeStats(S.hero, { ...S.equip, [slot]: it }).power - heroStats().power;
 }
 const itemScore = it => deltaFor(it) + it.rarity * 5 + (it.bossPet ? 1e6 : 0);
-function equip(it, slot) {
+function equip(it, slot, quiet) {
   if (slot == null) slot = bestSlotFor(it);
   S.inv.splice(S.inv.indexOf(it), 1);
   if (it.slot === 'pet') { const old = S.pets[slot]; if (old) S.inv.push(old); S.pets[slot] = it; }
   else { const old = S.equip[slot]; if (old) { old.isNew = false; S.inv.push(old); } S.equip[slot] = it; if (S.run) S.run.hp = Math.min(S.run.hp, heroStats().maxHp); }
-  it.isNew = false; save(); Sfx.play('tap'); toast(it.name + ' équipé');
+  it.isNew = false; if (quiet) return; save(); Sfx.play('tap'); toast(it.name + ' équipé');
+}
+/* Équipe tout ce qui augmente la puissance (armes, armure, talismans, familiers). Renvoie le nombre d'objets équipés. */
+const upgrades = () => S.inv.filter(it => (it.slot !== 'pet' || petSlots(S.hero.level) > 0) && deltaFor(it) > 0);
+function autoEquipAll() {
+  let n = 0;
+  for (let g = 0; g < 30; g++) {
+    const ups = upgrades(); if (!ups.length) break;
+    const best = ups.reduce((a, b) => (deltaFor(b) > deltaFor(a) ? b : a));
+    equip(best, null, true); n++;
+  }
+  return n;
 }
 function salvage(it) {
   S.inv.splice(S.inv.indexOf(it), 1); const v = salvageValue(it);
@@ -161,6 +185,7 @@ function xpBar() {
   const need = xpToNext(S.hero.level);
   return h('div', { class: 'xpbar', title: `${S.hero.xp} / ${need} XP` }, h('i', { style: { width: clamp(S.hero.xp / need, 0, 1) * 100 + '%' } }));
 }
+const heroTodo = () => (S.hero.points ? 1 : 0) + (S.hero.choices || 0) + (S.hero.tp || 0);
 function renderTop() {
   const st = heroStats();
   return h('div', { class: 'top' },
@@ -168,26 +193,40 @@ function renderTop() {
     h('div', { class: 'grow' },
       h('div', { class: 'name' }, S.hero.name),
       h('div', { class: 'sub num' }, `Niv. ${S.hero.level} · Puissance ${fmt(teamPower(st, myPets()))}`), xpBar()),
-    S.hero.points || S.hero.choices ? h('button', { class: 'chip hot', onclick: () => { tab = 'heros'; render(); } }, `+${S.hero.points || ''}${S.hero.choices ? ' ★' : ''}`) : null);
+    heroTodo() ? h('button', { class: 'chip hot', onclick: () => { tab = 'heros'; heroSub = S.hero.points || S.hero.choices ? 'stats' : 'tech'; render(); } }, S.hero.points ? `+${S.hero.points}` : '★') : null,
+    h('button', { class: 'gearbtn', 'aria-label': 'Options', onclick: openOptions }, icon('gear', 26)));
 }
 function renderNav() {
-  const nNew = S.inv.filter(i => i.isNew).length;
+  const nNew = S.inv.filter(i => i.isNew).length, nUp = upgrades().length;
   const b = (id, ic, label, badge) => h('button', { class: tab === id ? 'on' : '', onclick: () => { tab = id; Sfx.play('tap'); render(); } }, icon(ic, 26), label, badge ? h('span', { class: 'badge num' }, badge) : null);
-  return h('nav', { class: 'nav' }, b('tour', 'tower', 'Tour'), b('heros', 'hero', 'Héros', (S.hero.points || 0) + (S.hero.choices || 0) || null), b('sac', 'bag', 'Sac', nNew || null));
+  return h('nav', { class: 'nav' }, b('tour', 'tower', 'Tour'), b('heros', 'hero', 'Héros', heroTodo() || null), b('sac', 'bag', 'Sac', nUp ? '▲' : nNew || null));
+}
+function openOptions() {
+  overlay(close => [
+    h('h2', null, 'Options'),
+    h('button', { class: 'btn btn-stone', onclick: () => { S.music = S.music === false; Music.setOn(S.music); save(); close(); openOptions(); } }, icon(S.music !== false ? 'sound' : 'mute', 20), S.music !== false ? 'Musique : oui' : 'Musique : non'),
+    h('button', { class: 'btn btn-stone', onclick: () => { S.sound = !S.sound; Sfx.on = S.sound; save(); close(); openOptions(); } }, icon(S.sound ? 'sound' : 'mute', 20), S.sound ? 'Bruitages : oui' : 'Bruitages : non'),
+    h('button', { class: 'btn btn-stone', onclick: () => { S.autoEquip = S.autoEquip === false; save(); close(); openOptions(); } }, S.autoEquip !== false ? 'Équiper le meilleur après un run : oui' : 'Équiper le meilleur après un run : non'),
+    h('button', { class: 'btn btn-stone', onclick: () => { S.autoAlloc = !S.autoAlloc; save(); close(); openOptions(); } }, S.autoAlloc ? 'Répartir les points tout seul : oui' : 'Répartir les points tout seul : non'),
+    h('div', { class: 'row' }, h('button', { class: 'btn btn-sm btn-stone grow', onclick: () => { close(); openSaveIO(); } }, 'Sauvegarde'), h('button', { class: 'btn btn-sm btn-blood grow', onclick: () => { close(); confirmReset(); } }, 'Recommencer')),
+    h('div', { class: 'label', style: { textAlign: 'center' } }, `Climbrawl v${GAME_VERSION}`),
+    h('button', { class: 'btn btn-ghost', onclick: close }, 'Fermer'),
+  ], { center: true });
 }
 
 /* ---------- Onglet Tour ---------- */
 const TIPS = {
-  start: 'Un run = une montée. Après chaque victoire, tu choisis : continuer ou encaisser. Si tu tombes, tu perds le butin du run et la moitié de l\'XP.',
-  loot: 'Le butin et l\'XP du run ne sont à toi qu\'en te retirant. Chaque étage de plus rapporte plus, et risque plus.',
-  points: 'Tu as des points à répartir. Onglet Héros.',
+  start: 'Un run = une montée. Après chaque victoire : continuer ou encaisser. Si tu tombes, tu perds le butin du run et la moitié de l\'XP.',
+  qte: 'En combat, tape l\'écran quand le cercle se ferme : coup parfait sur tes attaques, parade sur les coups dangereux (!).',
+  tech: 'Les techniques se lancent avec la rage, en bas de l\'écran de combat. Choisis lesquelles emporter selon l\'adversaire.',
+  loot: 'Le butin et l\'XP du run ne sont à toi qu\'en encaissant. Chaque étage de plus rapporte plus, et risque plus.',
   pets: 'Emplacement de familier débloqué. Les familiers se trouvent sur les étages et chez les boss.',
   portal: 'Portail ouvert : tu peux démarrer un run juste après un boss vaincu. Utile pour farmer son familier exclusif.',
 };
 function pickTip() {
-  const want = ['start'];
+  const want = ['start', 'qte'];
+  if (S.stats.fights >= 2) want.push('tech');
   if (S.run && S.run.loot.length) want.push('loot');
-  if (S.hero.points) want.push('points');
   if (petSlots(S.hero.level) > 0) want.push('pets');
   if (S.portals.length > 1) want.push('portal');
   return want.find(k => !S.tips[k]);
@@ -199,13 +238,32 @@ function oddsInfo(wc) {
   if (wc >= .2) return ['Risqué', '#f07a2a'];
   return ['Suicidaire', '#e5484d'];
 }
+/* Sélecteur de techniques : 1 tap pour en changer, les conseillées contre cet adversaire sont signalées */
+function loadoutPicker(f, traits) {
+  const learned = ACTIVE_IDS.filter(id => activeRank(S.hero, id) > 0), cur = curLoadout(f), n = activeSlots(S.hero.level);
+  const box = h('div', { class: 'lo' });
+  box.append(h('div', { class: 'row' }, h('span', { class: 'label grow' }, `Techniques · ${cur.length}/${n}`),
+    S.hero.tp ? h('button', { class: 'chip hot', onclick: () => { tab = 'heros'; heroSub = 'tech'; render(); } }, `+${S.hero.tp} à apprendre`) : null));
+  const pills = h('div', { class: 'opts' });
+  for (const id of learned) {
+    const on = cur.includes(id), good = ACTIVES[id].counters.some(c => traits.includes(c));
+    pills.append(h('button', { class: 'pill tpill' + (on ? ' on' : '') + (good ? ' good' : ''), onclick: () => {
+      let ids = cur.slice();
+      if (on) ids = ids.filter(x => x !== id); else { if (ids.length >= n) ids.shift(); ids.push(id); }
+      S.lo = { floor: f, ids }; save(); Sfx.play('tap'); render();
+    } }, icon('t_' + id, 18), ACTIVES[id].name, good ? h('em', null, 'conseillé') : null));
+  }
+  if (!learned.length) pills.append(h('span', { style: { fontSize: '13px', color: 'var(--muted-ink)' } }, 'Aucune technique apprise.'));
+  box.append(pills);
+  return box;
+}
 function foeCard(f) {
-  const en = enemyAt(f), es = computeStats(en, en.equip);
-  const wc = winChance(S.hero, S.equip, myPets(), S.run ? S.run.hp : null, en, 60);
+  const en = enemyAt(f), es = computeStats(en, en.equip), traits = enemyTraits(en, heroStats());
+  const wc = winChance(heroFor(f), S.equip, myPets(), S.run ? S.run.hp : null, en, 60);
   const [oLabel, oCol] = oddsInfo(wc);
   const weapon = en.equip.weapon ? WEAPONS[en.equip.weapon.base].name : 'Poings';
   const tier = tierIdx(f);
-  return h('div', { class: 'panel' },
+  return h('div', { class: 'panel col' },
     h('div', { class: 'foe' },
       fullPreview(en, en.equip, -1, '', 1),
       h('div', { class: 'col', style: { gap: '6px', minWidth: 0 } },
@@ -214,19 +272,19 @@ function foeCard(f) {
         h('div', { class: 'row', style: { flexWrap: 'wrap', gap: '5px' } },
           h('span', { class: 'chip' }, weapon),
           en.skills.length ? h('span', { class: 'chip', title: en.skills.map(s => SKILLS[s].name).join(', ') }, en.skills.length + ' pouvoir' + (en.skills.length > 1 ? 's' : '')) : null,
-          en.pets.length ? h('span', { class: 'chip' }, icon('paw', 14), en.pets.map(p => PETS[p.species].name).join(', ')) : null),
-        h('div', { class: 'row num', style: { fontSize: '13px', gap: '12px' } }, h('span', null, `PV ${fmt(es.maxHp)}`), h('span', null, `Puiss. ${fmt(teamPower(es, en.pets))}`)),
+          en.pets.length ? h('span', { class: 'chip' }, icon('paw', 14), en.pets.length) : null),
+        traits.length ? h('div', { class: 'row', style: { flexWrap: 'wrap', gap: '5px' } }, traits.map(t => h('span', { class: 'chip trait', title: TRAITS[t].desc }, TRAITS[t].name))) : null,
         h('div', { class: 'odds' }, h('div', { class: 'meter' }, h('i', { style: { width: Math.round(wc * 100) + '%', background: oCol } })), h('b', { class: 'num', style: { color: oCol } }, Math.round(wc * 100) + '%')),
-        h('div', { style: { fontSize: '12px', color: oCol } }, oLabel))),
-    en.boss ? h('div', { class: 'excl' }, icon('paw', 18), `Butin exclusif : ${BOSS_PETS[tier].name} · ${Math.round(BOSS_PET_CHANCE * 100)}%`) : null);
+        h('div', { style: { fontSize: '12px', color: oCol } }, oLabel + ' (sans tes réflexes)'))),
+    en.boss ? h('div', { class: 'excl' }, icon('paw', 18), `Butin exclusif : ${BOSS_PETS[tier].name} · ${Math.round(BOSS_PET_CHANCE * 100)}%`) : null,
+    loadoutPicker(f, traits));
 }
 function tabTour() {
   const sc = h('div', { class: 'scroll' });
-  const f = S.run ? S.run.floor : Math.max(...S.portals), T = tierOf(f);
+  const f = S.run ? S.run.floor : startFloor(), T = tierOf(f);
   sc.append(h('div', { class: 'col', style: { gap: '6px' } },
-    h('div', { class: 'tier' }, h('h2', null, T.name), h('span', { class: 'label num' }, `Palier ${tierIdx(f) + 1} / 10`)),
-    h('div', { class: 'prog' }, h('i', { style: { width: Math.min(100, S.best) + '%' } })),
-    h('div', { class: 'row label num', style: { justifyContent: 'space-between' } }, h('span', null, `Record : étage ${S.best}`), h('span', null, `Sommet : ${TOWER_TOP}`))));
+    h('div', { class: 'tier' }, h('h2', null, T.name), h('span', { class: 'label num' }, `Record ${S.best} / ${TOWER_TOP}`)),
+    h('div', { class: 'prog' }, h('i', { style: { width: Math.min(100, S.best) + '%' } }))));
   const tip = pickTip();
   if (tip) sc.append(h('div', { class: 'tip' }, icon('xp', 20), h('span', null, TIPS[tip]), h('button', { 'aria-label': 'Fermer', onclick: () => { S.tips[tip] = 1; save(); render(); } }, '×')));
   if (S.run) runView(sc); else campView(sc);
@@ -234,39 +292,27 @@ function tabTour() {
 }
 function campView(sc) {
   if (S.lastRun) sc.append(runSummary(S.lastRun, true));
-  if (S.hero.points || S.hero.choices) sc.append(h('button', { class: 'btn btn-soul', onclick: () => { tab = 'heros'; render(); } }, icon('xp', 22), S.hero.points ? `${S.hero.points} points à répartir` : 'Choix de la Brute disponible'));
-  const pick = h('div', { class: 'portals' });
-  let sel = S.portals.includes(S._portalSel) ? S._portalSel : Math.max(...S.portals);
-  const drawP = () => { pick.innerHTML = ''; S.portals.slice().sort((a, b) => a - b).forEach(p => pick.append(h('button', { class: 'pill' + (p === sel ? ' on' : ''), onclick: () => { sel = S._portalSel = p; drawP(); go.textContent = `Lancer un run · étage ${sel}`; } }, icon(p === 1 ? 'tower' : 'portal', 16), p === 1 ? 'Étage 1' : `Étage ${p}`))); };
-  drawP();
-  const go = h('button', { class: 'btn btn-gold btn-big', onclick: () => { startRun(sel); render(); } }, `Lancer un run · étage ${sel}`);
-  sc.append(h('div', { class: 'panel col' }, h('div', { class: 'label' }, 'Point de départ'), pick,
-    h('div', { style: { fontSize: '12px', color: 'var(--muted-ink)' } }, 'Chaque boss vaincu ouvre un portail juste après lui.')));
-  sc.append(foeCard(sel), go);
+  const sel = startFloor();
+  if (S.portals.length > 1) {
+    const pick = h('div', { class: 'portals' });
+    S.portals.slice().sort((a, b) => a - b).forEach(p => pick.append(h('button', { class: 'pill' + (p === sel ? ' on' : ''), onclick: () => { S._portalSel = p; render(); } }, icon(p === 1 ? 'tower' : 'portal', 16), `Étage ${p}`)));
+    sc.append(h('div', { class: 'col', style: { gap: '6px' } }, h('div', { class: 'label' }, 'Départ'), pick));
+  }
+  sc.append(foeCard(sel), h('div', { class: 'cta' }, h('button', { class: 'btn btn-gold btn-big', onclick: () => { startRun(sel); startFight(); } }, `Combattre · étage ${sel}`)));
 }
 function runView(sc) {
   const run = S.run, st = heroStats();
   const canDrink = run.flasks > 0 && run.hp < st.maxHp;
-  const flasks = h('div', { class: 'flasks' }); for (let i = 0; i < 3; i++) flasks.append(icon(i < run.flasks ? 'flask' : 'flaskE', 22));
-  const nextSanct = Math.ceil(run.floor / 5) * 5;
+  const flasks = h('div', { class: 'flasks' }); for (let i = 0; i < 3; i++) flasks.append(icon(i < run.flasks ? 'flask' : 'flaskE', 20));
+  const nextSanct = Math.ceil(run.floor / 5) * 5, nextBoss = Math.ceil(run.floor / 10) * 10;
   sc.append(h('div', { class: 'panel dark col' },
-    h('div', { class: 'row' }, h('span', { class: 'label' }, `Run · départ étage ${run.start}`)),
     stakeLine(run),
-    h('div', { class: 'row', style: { fontSize: '12px', color: 'var(--muted)' } }, icon('flame', 16), h('span', { class: 'grow' }, `Prochain sanctuaire (vie et fioles) : étage ${nextSanct}`)),
-    h('div', { class: 'row' }, icon('heart', 18), h('span', { class: 'label' }, 'Vie'), h('span', { class: 'grow' }), flasks, h('button', { class: 'btn btn-sm btn-blood', disabled: !canDrink, onclick: drink }, 'Boire')),
-    hpBar(run.hp, st.maxHp)));
+    h('div', { class: 'row' }, icon('heart', 18), h('div', { class: 'grow' }, hpBar(run.hp, st.maxHp)), flasks, h('button', { class: 'btn btn-sm btn-blood', disabled: !canDrink, onclick: drink }, 'Boire')),
+    h('div', { style: { fontSize: '12px', color: 'var(--muted)' } }, `Sanctuaire (vie, fioles) : étage ${nextSanct} · Boss : étage ${nextBoss}`)));
   sc.append(foeCard(run.floor));
-  sc.append(h('button', { class: 'btn btn-gold btn-big', onclick: startFight }, `Combattre · étage ${run.floor}`));
-  sc.append(h('button', { class: 'btn btn-soul', onclick: confirmRetreat }, icon('xp', 20), `Encaisser ${fmt(run.xp)} XP${run.loot.length ? ' et ' + run.loot.length + ' objet' + (run.loot.length > 1 ? 's' : '') : ''}`));
-  const strip = h('div', { class: 'strip' });
-  for (let n = run.floor + 4; n >= Math.max(run.start, run.floor - 1); n--) {
-    const tags = h('span', { class: 'tag' });
-    if (n % 10 === 0) tags.append(icon('skull', 18));
-    if (n % 5 === 0) tags.append(icon('flame', 18));
-    const label = n < run.floor ? 'Vaincu' : n === run.floor ? `${enemyAt(n).name} ${enemyAt(n).title}` : n % 10 === 0 ? 'Boss du palier' : n % 5 === 0 ? 'Sanctuaire' : '?';
-    strip.append(h('div', { class: 'floor' + (n < run.floor ? ' done' : '') + (n === run.floor ? ' cur' : '') }, h('span', { class: 'n num' }, n), h('span', null, label), tags));
-  }
-  sc.append(h('div', { class: 'label', style: { marginTop: '4px' } }, 'La tour'), strip);
+  sc.append(h('div', { class: 'decide cta' },
+    h('button', { class: 'btn btn-gold', onclick: startFight }, h('span', null, 'Combattre', h('small', null, `étage ${run.floor}`))),
+    h('button', { class: 'btn btn-soul', onclick: () => { endRun('retreat'); Sfx.play('level'); render(); } }, h('span', null, 'Encaisser', h('small', null, `${fmt(run.xp)} XP · ${run.loot.length} obj.`)))));
 }
 function stakeLine(run, big) {
   const lose = Math.ceil(run.xp * (1 - DEATH_XP_KEEP));
@@ -275,16 +321,8 @@ function stakeLine(run, big) {
     h('div', { class: 'risk' }, run.xp || run.loot.length ? `Si tu tombes : −${run.loot.length} obj. et −${fmt(lose)} XP.` : 'Rien en jeu pour l\'instant.'));
 }
 function drink() { const mx = heroStats().maxHp; S.run.flasks--; S.run.hp = Math.min(mx, S.run.hp + Math.round(mx * .4)); save(); Sfx.init(); Sfx.play('heal'); render(); }
-function confirmRetreat() {
-  overlay(close => [
-    h('h2', null, 'Se retirer ?'),
-    h('p', { style: { margin: 0, lineHeight: 1.45, textAlign: 'center' } }, `Tu encaisses ${fmt(S.run.xp)} XP et ${S.run.loot.length} objet${S.run.loot.length > 1 ? 's' : ''}. Le run se termine.`),
-    h('button', { class: 'btn btn-soul', onclick: () => { close(); endRun('retreat'); Sfx.play('level'); render(); } }, 'Encaisser'),
-    h('button', { class: 'btn btn-stone', onclick: close }, 'Continuer'),
-  ], { center: true });
-}
 function runSummary(L, compact) {
-  const title = L.reason === 'death' ? 'Run terminé : tombé' : 'Run terminé : retraite';
+  const title = L.reason === 'death' ? 'Run terminé : tombé' : 'Run terminé : encaissé';
   return h('div', { class: 'panel col summary' },
     h('div', { class: 'row' }, h('b', { class: 'grow', style: { fontFamily: 'var(--f-display)', fontSize: '18px', fontWeight: 400 } }, title),
       compact ? h('button', { class: 'x', 'aria-label': 'Fermer', onclick: () => { S.lastRun = null; save(); render(); } }, '×') : null),
@@ -293,24 +331,33 @@ function runSummary(L, compact) {
       h('div', null, h('span', null, 'XP'), h('b', null, '+' + fmt(L.xp) + (L.xpLost ? ` (−${fmt(L.xpLost)})` : ''))),
       h('div', null, h('span', null, 'Niveau'), h('b', null, L.to > L.from ? `${L.from} → ${L.to}` : L.to)),
       h('div', null, h('span', null, 'Butin'), h('b', null, L.reason === 'death' ? (L.lost ? `${L.lost} perdu${L.lost > 1 ? 's' : ''}` : '0') : `${L.secured} gardé${L.secured > 1 ? 's' : ''}`))),
-    L.points ? h('div', { style: { fontSize: '13px', color: '#21a35a' } }, `+${L.points} points de stats gagnés.`) : null);
+    L.equipped ? h('div', { style: { fontSize: '13px', color: '#21a35a' } }, `${L.equipped} objet${L.equipped > 1 ? 's' : ''} plus fort${L.equipped > 1 ? 's' : ''} équipé${L.equipped > 1 ? 's' : ''} automatiquement.`) : null,
+    S.hero.points || S.hero.tp || S.hero.choices ? h('button', { class: 'btn btn-sm btn-soul', onclick: () => { tab = 'heros'; heroSub = S.hero.points || S.hero.choices ? 'stats' : 'tech'; render(); } },
+      [S.hero.points ? `${S.hero.points} points` : null, S.hero.tp ? `${S.hero.tp} technique${S.hero.tp > 1 ? 's' : ''}` : null, S.hero.choices ? 'Choix de la Brute' : null].filter(Boolean).join(' · ')) : null);
 }
 
-/* ---------- Combat ---------- */
+/* ---------- Combat interactif ---------- */
 async function startFight() {
   Sfx.init(); Sfx.on = S.sound;
   try { await document.fonts.load('20px "Lilita One"'); } catch (e) { /* police de secours */ }
-  const en = enemyAt(S.run.floor);
-  const heroEnt = JSON.parse(JSON.stringify(S.hero)), heroEq = JSON.parse(JSON.stringify(S.equip)), pets = JSON.parse(JSON.stringify(myPets()));
-  const res = simulateFight(S.hero, S.equip, pets, S.run.hp, en, (Math.random() * 2 ** 31) | 0);
-  const out = applyOutcome(en, res);
-  save();
-  showFight(heroEnt, heroEq, pets, en, res, out);
+  const floor = S.run.floor, en = enemyAt(floor), seed = (Math.random() * 2 ** 31) | 0, lo = curLoadout(floor);
+  const heroEnt = JSON.parse(JSON.stringify(heroFor(floor))), heroEq = JSON.parse(JSON.stringify(S.equip)), pets = JSON.parse(JSON.stringify(myPets()));
+  S.pendingFight = { floor, seed, lo }; save(); // recharger la page ne permet pas d'annuler une défaite
+  const F = createFight(heroEnt, heroEq, pets, S.run.hp, en, seed);
+  showFight(heroEnt, heroEq, pets, en, F, floor);
 }
-function showFight(heroEnt, heroEq, pets, en, res, out) {
+/* Combat commencé mais jamais terminé (page fermée) : résolu en automatique avec le même tirage */
+function resolvePendingFight() {
+  const P = S.pendingFight; S.pendingFight = null;
+  if (!P || !S.run || S.run.floor !== P.floor) return;
+  const res = simulateFight(Object.assign({}, S.hero, { loadout: P.lo }), S.equip, myPets(), S.run.hp, enemyAt(P.floor), P.seed, { noEvents: true });
+  const out = applyOutcome(enemyAt(P.floor), res); save();
+  toast(out.win ? `Combat de l'étage ${P.floor} terminé : victoire` : `Combat de l'étage ${P.floor} terminé : défaite`);
+}
+function showFight(heroEnt, heroEq, pets, en, F, floor) {
   const app = document.getElementById('app');
   Music.set('fight');
-  const U = res.units, bars = {};
+  const U = F.info(), bars = {};
   const side = (id, ent, eq, cls) => {
     const petIds = Object.keys(U).filter(k => k[0] === id && k.length > 1);
     bars[id] = hpBar(U[id].start != null ? U[id].start : U[id].max, U[id].max);
@@ -319,22 +366,44 @@ function showFight(heroEnt, heroEq, pets, en, res, out) {
   };
   const canvas = h('canvas', { class: 'arena' });
   const logBox = h('div', { class: 'flog' });
+  const rage = h('i'), rageTxt = h('span', { class: 'num' }, '0');
+  const tbtns = {};
+  const techRow = h('div', { class: 'techs' });
+  for (const id of Object.keys(F.actives)) {
+    const A = ACTIVES[id];
+    const b = h('button', { class: 'tbtn', 'aria-label': A.name }, icon('t_' + id, 24), h('b', null, A.name), h('small', { class: 'num' }, A.cost));
+    b.onclick = () => { if (!F.canUse(id)) return; fp.queueActive(id); b.classList.add('queued'); Sfx.play('tap'); };
+    tbtns[id] = b; techRow.append(b);
+  }
+  if (!techRow.children.length) techRow.append(h('div', { class: 'notech' }, 'Aucune technique emportée.'));
+  const orbTag = h('span', { class: 'orbtag num' });
   const spd = h('button', { class: 'btn btn-sm btn-stone num' }, 'x' + S.speed);
   const skip = h('button', { class: 'btn btn-sm btn-stone grow' }, 'Passer');
   const root = h('div', { class: 'fight' },
-    h('div', { class: 'hud' }, side('L', heroEnt, heroEq, ''), h('div', { class: 'fl' }, 'Étage', h('b', { class: 'num' }, out.floor)), side('R', en, en.equip, 'r')),
-    canvas, logBox, h('div', { class: 'fctl' }, spd, skip));
+    h('div', { class: 'hud' }, side('L', heroEnt, heroEq, ''), h('div', { class: 'fl' }, 'Étage', h('b', { class: 'num' }, floor)), side('R', en, en.equip, 'r')),
+    canvas,
+    h('div', { class: 'rage' }, h('span', { class: 'label' }, 'Rage'), h('div', { class: 'ragebar' }, rage), rageTxt, orbTag),
+    techRow, logBox, h('div', { class: 'fctl' }, spd, skip));
   app.append(root);
   const fp = new FightPlayer(canvas, {
-    heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, res, floor: out.floor, speed: S.speed,
+    F, heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, floor, speed: S.speed, tutorial: !S.tips.qte,
+    orbVal: Math.max(2, Math.round(xpReward(floor) * .06)),
     onHp: hp => { for (const k in hp) { if (!bars[k]) continue; if (k.length === 1) setBar(bars[k], hp[k], U[k].max); else bars[k].firstChild.style.width = clamp(hp[k] / U[k].max, 0, 1) * 100 + '%'; } },
-    onLog: (t, sd) => { logBox.append(h('div', { class: sd }, t)); while (logBox.children.length > 6) logBox.firstChild.remove(); },
+    onLog: (t, sd) => { logBox.append(h('div', { class: sd }, t)); while (logBox.children.length > 3) logBox.firstChild.remove(); },
+    onRage: F2 => {
+      const r = F2.rage(); rage.style.width = r + '%'; rageTxt.textContent = r;
+      for (const id in tbtns) { const b = tbtns[id], ok = F2.canUse(id); b.disabled = !ok && !fp.queue.includes(id); b.classList.toggle('ready', ok); b.style.setProperty('--p', Math.min(1, r / ACTIVES[id].cost)); if (!fp.queue.includes(id)) b.classList.remove('queued'); }
+    },
+    onOrb: x => { orbTag.textContent = `+${x} XP bonus`; },
   });
+  window.__fp = fp;
   spd.onclick = () => { S.speed = S.speed >= 3 ? 1 : S.speed + 1; fp.speed = S.speed; spd.textContent = 'x' + S.speed; save(); };
   skip.onclick = () => { skip.disabled = true; fp.skip(); };
-  fp.run().then(() => {
-    if (fp.skipped) fp.finalize();
+  fp.run().then(res => {
     skip.disabled = true;
+    res.orbXp = fp.orbXp;
+    if ((fp.qteN || 0) >= 3) S.tips.qte = 1;
+    const out = applyOutcome(en, res); S.pendingFight = null; save();
     setTimeout(() => out.win ? showVictory(out, fp, root) : showDeath(out, fp, root), fp.skipped ? 200 : 100);
   });
 }
@@ -353,36 +422,47 @@ function showVictory(out, fp, root) {
   const run = S.run, st = heroStats();
   const items = [
     h('h2', { class: 'win' }, out.boss ? 'BOSS VAINCU' : 'VICTOIRE'),
-    h('div', { class: 'row', style: { justifyContent: 'center', gap: '14px' } }, h('span', { class: 'label' }, `Étage ${out.floor}`), xpTag(out.xp, 22), out.record ? h('span', { class: 'chip', style: { background: 'var(--gold)' } }, 'Record') : null),
+    h('div', { class: 'row', style: { justifyContent: 'center', gap: '14px' } }, h('span', { class: 'label' }, `Étage ${out.floor}`), xpTag(out.xp + out.orbXp, 22), out.record ? h('span', { class: 'chip', style: { background: 'var(--gold)' } }, 'Record') : null),
   ];
+  if (out.orbXp) items.push(h('div', { style: { fontSize: '12px', textAlign: 'center', color: 'var(--muted-ink)' } }, `dont +${out.orbXp} XP d'orbes attrapées`));
   out.loot.forEach((it, i) => items.push(lootRow(it, i, true)));
-  if (out.portal) items.push(h('div', { class: 'tip' }, icon('portal', 20), h('span', null, `Portail ouvert : tu pourras démarrer tes prochains runs à l'étage ${out.portal}.`)));
+  if (out.portal) items.push(h('div', { class: 'tip' }, icon('portal', 20), h('span', null, `Portail ouvert : tes prochains runs pourront démarrer à l'étage ${out.portal}.`)));
   if (out.sanctuary) items.push(h('div', { class: 'tip warm' }, icon('flame', 20), h('span', null, `Sanctuaire : vie et fioles restaurées. Ton butin reste en jeu.`)));
-  const nx = enemyAt(run.floor), wc = winChance(S.hero, S.equip, myPets(), run.hp, nx, 50), [lab, col] = oddsInfo(wc);
+  const nf = run.floor, nx = enemyAt(nf), wc = winChance(heroFor(nf), S.equip, myPets(), run.hp, nx, 50), [lab, col] = oddsInfo(wc);
+  const tr = enemyTraits(nx, st);
   items.push(h('div', { class: 'col', style: { gap: '4px' } },
-    h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'label' }, out.healed && !out.sanctuary ? `Vie · +${out.healed}` : 'Vie'), h('span', { style: { fontSize: '13px' } }, 'Étage ', h('b', { class: 'num' }, run.floor), ' : ', h('b', { style: { color: col } }, `${lab} ${Math.round(wc * 100)}%`))),
-    hpBar(run.hp, st.maxHp)));
+    h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'label' }, out.healed && !out.sanctuary ? `Vie · +${out.healed}` : 'Vie'), h('span', { style: { fontSize: '13px' } }, `Étage ${nf}${nx.boss ? ' (boss)' : ''} : `, h('b', { style: { color: col } }, `${lab} ${Math.round(wc * 100)}%`))),
+    hpBar(run.hp, st.maxHp),
+    tr.length ? h('div', { style: { fontSize: '12px', color: 'var(--muted-ink)' } }, `${nx.name} : ${tr.map(t => TRAITS[t].name).join(', ')}. Techniques : ${curLoadout(nf).map(id => ACTIVES[id].name).join(', ') || 'aucune'}.`) : null));
   items.push(stakeLine(run, true));
   items.push(h('div', { class: 'decide' },
-    h('button', { class: 'btn btn-gold', onclick: () => { ov.close(); leaveFight(fp, root); startFight(); } }, h('span', null, 'Continuer', h('small', null, `étage ${run.floor} · ${Math.round(wc * 100)}%`))),
+    h('button', { class: 'btn btn-gold', onclick: () => { ov.close(); fp.destroy(); root.remove(); startFight(); } }, h('span', null, 'Continuer', h('small', null, `étage ${nf} · ${Math.round(wc * 100)}%`))),
     h('button', { class: 'btn btn-soul', onclick: () => { ov.close(); endRun('retreat'); Sfx.play('level'); leaveFight(fp, root); } }, h('span', null, 'Encaisser', h('small', null, `${fmt(run.xp)} XP · ${run.loot.length} obj.`)))));
-  items.push(h('button', { class: 'btn btn-ghost', onclick: () => { ov.close(); leaveFight(fp, root); } }, 'Préparer (sac, héros) avant de décider'));
+  items.push(h('button', { class: 'btn btn-ghost', onclick: () => { ov.close(); leaveFight(fp, root); } }, 'Voir l\'adversaire, changer de techniques'));
   const ov = overlay(items, { dismiss: false });
 }
 function showDeath(out, fp, root) {
   Sfx.play('death'); Music.set(null);
-  const L = S.lastRun;
+  const L = S.lastRun, from = startFloor();
   const scr = h('div', { class: 'souls-screen dead' },
     h('h1', null, 'Tu es tombé'),
     h('p', null, `Étage ${out.floor}. Perdu : ${out.lostLoot ? `${out.lostLoot} objet${out.lostLoot > 1 ? 's' : ''} et ` : ''}${fmt(L.xpLost)} XP.`),
-    h('p', { class: 'keep' }, `Tu gardes ${fmt(L.xp)} XP (la moitié).${L.to > L.from ? ` Niveau ${L.from} → ${L.to} : +${L.points} points.` : ''}`),
-    h('button', { class: 'btn btn-gold', onclick: () => { scr.remove(); leaveFight(fp, root); if (S.hero.points) { tab = 'heros'; render(); } } }, L.points ? 'Répartir mes points' : 'Se relever'));
+    h('p', { class: 'keep' }, `Tu gardes ${fmt(L.xp)} XP (la moitié).${L.to > L.from ? ` Niveau ${L.from} → ${L.to}.` : ''}`),
+    h('button', { class: 'btn btn-gold', onclick: () => { scr.remove(); fp.destroy(); root.remove(); startRun(from); startFight(); } }, `Rejouer · étage ${from}`),
+    heroTodo() ? h('button', { class: 'btn btn-stone', onclick: () => { scr.remove(); tab = 'heros'; heroSub = S.hero.points || S.hero.choices ? 'stats' : 'tech'; leaveFight(fp, root); } }, 'Améliorer mon héros') :
+      h('button', { class: 'btn btn-ghost', style: { color: '#c9c2e6' }, onclick: () => { scr.remove(); leaveFight(fp, root); } }, 'Retour'));
   document.getElementById('app').append(scr);
 }
 
 /* ---------- Onglet Héros : répartition des points ---------- */
 function tabHero() {
   const sc = h('div', { class: 'scroll' });
+  const seg = h('div', { class: 'seg' });
+  [['stats', 'Stats', (S.hero.points ? 1 : 0) + (S.hero.choices || 0)], ['tech', 'Techniques', S.hero.tp || 0], ['codex', 'Collection', 0]].forEach(([k, l, n]) =>
+    seg.append(h('button', { class: heroSub === k ? 'on' : '', onclick: () => { heroSub = k; Sfx.play('tap'); render(); } }, l, n ? h('span', { class: 'badge num' }, n) : null)));
+  sc.append(seg);
+  if (heroSub === 'tech') { sc.append(techPanel()); return sc; }
+  if (heroSub === 'codex') { sc.append(codexPanel()); return sc; }
   if (!alloc) alloc = { str: 0, agi: 0, spd: 0, end: 0 };
   const used = STAT_KEYS.reduce((a, k) => a + alloc[k], 0), left = S.hero.points - used;
   const preview = { ...S.hero, base: { ...S.hero.base } }; for (const k of STAT_KEYS) preview.base[k] += alloc[k];
@@ -411,22 +491,40 @@ function tabHero() {
     h('div', { class: 'row' }, h('span', { class: 'label grow' }, 'Statistiques'), h('span', { class: 'chip' + (left ? ' hot' : '') }, `${left} point${left > 1 ? 's' : ''} libre${left > 1 ? 's' : ''}`)),
     rows,
     S.hero.points ? h('div', { class: 'row' },
-      h('button', { class: 'btn btn-sm btn-stone', onclick: () => { autoAlloc(left); render(); } }, 'Conseil'),
-      h('button', { class: 'btn btn-sm btn-gold grow', disabled: !used, onclick: () => { for (const k of STAT_KEYS) S.hero.base[k] += alloc[k]; S.hero.points -= used; alloc = null; save(); Sfx.play('level'); toast('Points attribués'); render(); } }, used ? `Valider ${used} point${used > 1 ? 's' : ''}` : 'Valider')) : null));
+      used ? h('button', { class: 'btn btn-sm btn-stone', onclick: () => { alloc = null; render(); } }, 'Annuler') :
+        h('button', { class: 'btn btn-sm btn-soul grow', onclick: () => { autoAlloc(left); commitAlloc(); } }, `Répartir auto (${ORIGINS[S.hero.origin].name})`),
+      used ? h('button', { class: 'btn btn-sm btn-gold grow', onclick: commitAlloc }, `Valider ${used} point${used > 1 ? 's' : ''}`) : null) : null));
   const d = (k, a, b, f) => h('div', null, h('span', null, k), h('b', { class: 'num' }, f(b), a !== b ? h('small', { class: b > a ? 'delta-up' : 'delta-down' }, ' ' + (b > a ? '▲' : '▼')) : null));
   const p1 = v => pct(v), r0 = v => fmt(v);
   sc.append(h('div', { class: 'panel' }, h('div', { class: 'label', style: { marginBottom: '6px' } }, 'Au combat'),
     h('div', { class: 'derived' },
       d('PV max', st0.maxHp, st.maxHp, r0), d('Dégâts', Math.round(st0.dmg), Math.round(st.dmg), r0), d('Armure', st0.armor, st.armor, r0), d('Vitesse', st0.speed, st.speed, v => round1(v).toString().replace('.', ',')),
       d('Esquive', st0.evade, st.evade, p1), d('Critique', st0.crit, st.crit, p1), d('Enchaînement', st0.combo, st.combo, p1), d('Parade', st0.block, st.block, p1))));
-  sc.append(codexPanel());
-  sc.append(h('div', { class: 'panel col' }, h('div', { class: 'row' }, h('span', { class: 'label grow' }, 'Options'), h('span', { class: 'chip' }, `v${GAME_VERSION}`)),
-    h('div', { class: 'row', style: { flexWrap: 'wrap' } },
-      h('button', { class: 'btn btn-sm btn-stone', onclick: () => { S.music = S.music === false; Music.setOn(S.music); save(); render(); } }, icon(S.music !== false ? 'sound' : 'mute', 18), S.music !== false ? 'Musique activée' : 'Musique coupée'),
-      h('button', { class: 'btn btn-sm btn-stone', onclick: () => { S.sound = !S.sound; Sfx.on = S.sound; save(); render(); } }, icon(S.sound ? 'sound' : 'mute', 18), S.sound ? 'Bruitages activés' : 'Bruitages coupés'),
-      h('button', { class: 'btn btn-sm btn-stone', onclick: openSaveIO }, 'Sauvegarde'),
-      h('button', { class: 'btn btn-sm btn-blood', onclick: confirmReset }, 'Recommencer'))));
   return sc;
+}
+function commitAlloc() {
+  const used = STAT_KEYS.reduce((a, k) => a + alloc[k], 0);
+  for (const k of STAT_KEYS) S.hero.base[k] += alloc[k]; S.hero.points -= used; alloc = null; save(); Sfx.play('level'); toast('Points attribués'); render();
+}
+/* Arbre de techniques : 1 point = apprendre ou monter d'un rang (max 3) */
+function techPanel() {
+  const tp = S.hero.tp || 0, nextLv = (Math.floor(S.hero.level / TP_EVERY) + 1) * TP_EVERY;
+  const list = h('div', { class: 'col', style: { gap: '8px' } });
+  for (const id of ACTIVE_IDS) {
+    const A = ACTIVES[id], r = activeRank(S.hero, id);
+    const pips = h('span', { class: 'pips' }); for (let i = 1; i <= 3; i++) pips.append(h('i', { class: i <= r ? 'on' : '' }));
+    list.append(h('div', { class: 'tech' + (r ? '' : ' off') },
+      h('div', { class: 'ticon' }, icon('t_' + id, 30)),
+      h('div', { class: 'grow' },
+        h('div', { class: 'row', style: { gap: '6px' } }, h('b', { class: 'grow' }, A.name), pips),
+        h('p', null, A.desc(Math.max(1, r)), r && r < 3 ? h('span', { class: 'next' }, ` Rang ${r + 1} : ${A.short(r)} → ${A.short(r + 1)}.`) : null),
+        h('small', null, `Coût ${A.cost} rage · contre ${A.counters.map(c => TRAITS[c].name).join(', ')}`)),
+      r >= 3 ? h('span', { class: 'chip' }, 'Max') : h('button', { class: 'btn btn-sm ' + (tp ? 'btn-gold' : 'btn-stone'), disabled: !tp, onclick: () => { if (learnActive(S.hero, id)) { S.lo = null; save(); Sfx.play('level'); toast(r ? `${A.name} rang ${r + 1}` : `${A.name} apprise`); render(); } } }, r ? '+1' : 'Apprendre')));
+  }
+  return h('div', { class: 'panel col' },
+    h('div', { class: 'row' }, h('b', { class: 'grow', style: { fontFamily: 'var(--f-display)', fontWeight: 400, fontSize: '19px' } }, 'Techniques'), h('span', { class: 'chip' + (tp ? ' hot' : '') }, `${tp} point${tp > 1 ? 's' : ''}`)),
+    h('div', { class: 'tip' }, icon('xp', 20), h('span', null, `La rage monte quand tu frappes et encaisses. ${activeSlots(S.hero.level)} techniques par combat${S.hero.level < 20 ? ' (3 au niv. 20)' : ''}, choisies sur la fiche adverse. Prochain point : niv. ${nextLv}.`)),
+    list);
 }
 function codexPanel() {
   ensureCodex();
@@ -501,6 +599,8 @@ function confirmReset() {
 /* ---------- Onglet Sac ---------- */
 function tabBag() {
   const sc = h('div', { class: 'scroll' });
+  const ups = upgrades();
+  if (ups.length) sc.append(h('button', { class: 'btn btn-gold', onclick: () => { const n = autoEquipAll(); save(); Sfx.play('level'); toast(`${n} objet${n > 1 ? 's' : ''} équipé${n > 1 ? 's' : ''}`); render(); } }, `Équiper le meilleur · ${ups.length} amélioration${ups.length > 1 ? 's' : ''}`));
   if (S.run && S.run.loot.length) sc.append(h('div', { class: 'panel col' }, h('div', { class: 'row' }, icon('lock', 18), h('span', { class: 'label grow' }, `Butin du run · en jeu`)),
     h('div', { class: 'grid' }, S.run.loot.map(it => itemTile(it, { onclick: () => openItem(it, null, true) })))));
   const slot = (key, label, ei) => h('div', null, itemTile(S.equip[key], { empty: label, emptyIcon: ei, onclick: () => S.equip[key] && openItem(S.equip[key], key) }), h('div', { class: 'slotlab' }, label));
@@ -518,7 +618,7 @@ function tabBag() {
   sc.append(h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'label num' }, `Sac · ${S.inv.length} / ${INV_MAX}`),
     commons.length ? h('button', { class: 'btn btn-sm btn-stone', onclick: () => { let t = 0; commons.slice().forEach(i => { t += salvage(i); }); toast(`+${fmt(t)} XP`); render(); } }, `Démanteler ${commons.length} communs · +${fmt(commons.reduce((a, i) => a + salvageValue(i), 0))} XP`) : null));
   if (inv.length) sc.append(h('div', { style: { fontSize: '12px', color: 'var(--muted-ink)' } }, h('b', { class: 'delta-up' }, '▲'), ' = plus fort que ce que tu portes. Touche un objet pour comparer stat par stat.'));
-  if (!inv.length) sc.append(h('div', { class: 'panel', style: { textAlign: 'center', color: 'var(--muted-ink)', fontSize: '14px', lineHeight: 1.5 } }, 'Ton sac est vide. Les étages lâchent armes, armures, talismans et familiers. Sécurise-les au sanctuaire.'));
+  if (!inv.length) sc.append(h('div', { class: 'panel', style: { textAlign: 'center', color: 'var(--muted-ink)', fontSize: '14px', lineHeight: 1.5 } }, 'Ton sac est vide. Les étages lâchent armes, armures, talismans et familiers. Encaisse ton run pour les garder.'));
   else sc.append(h('div', { class: 'grid' }, inv.map(it => itemTile(it, { up: deltaFor(it) > 0, showNew: true, onclick: () => openItem(it) }))));
   return sc;
 }
@@ -628,7 +728,7 @@ function renderCreate(app) {
   const drawO = () => { origins.innerHTML = ''; for (const k in ORIGINS) { const O = ORIGINS[k]; const bonus = STAT_KEYS.filter(s => O.stats[s]).map(s => `+${O.stats[s]} ${STAT_SHORT[s]}`).join('  '); origins.append(h('button', { class: 'origin' + (st.origin === k ? ' on' : ''), onclick: () => { st.origin = k; rebuildView(); drawO(); } }, h('b', null, O.name), h('span', null, O.desc), h('i', null, `${bonus} · ${WEAPONS[O.weapon].name}`))); } };
   drawO();
   sc.append(
-    h('div', { class: 'logo' }, h('h1', null, 'FIGHTERS'), h('p', null, 'La Tour aux cent étages')),
+    h('div', { class: 'logo' }, h('h1', null, 'CLIMBRAWL'), h('p', null, 'La Tour aux cent étages')),
     prev,
     section('Nom', h('div', { class: 'row' }, nameIn, h('button', { class: 'btn btn-sm btn-stone', 'aria-label': 'Nom au hasard', onclick: () => { nameIn.value = st.name = randomName(); } }, icon('dice', 22)))),
     section('Origine', origins),
@@ -649,8 +749,8 @@ function renderCreate(app) {
 function boot(data) {
   S = (data && data.S) || load();
   if (S && S.v !== 2) S = null;
-  if (S && !S.speed) S.speed = 1;
-  if (S) ensureCodex();
+  if (S && !S.speed) S.speed = 2;
+  if (S) { ensureCodex(); ensureHeroV3(S.hero); if (S.pendingFight) resolvePendingFight(); }
   if (S) { Sfx.on = S.sound !== false; Music.on = S.music !== false; }
   render();
   cloudInit();

@@ -56,6 +56,13 @@ const ICONS = {
   sk_premier: '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5" stroke="currentColor" stroke-width="2.2"/>',
   sk_fantome: '<path d="M5.5 21V11a6.5 6.5 0 0 1 13 0v10l-2.2-1.8-2.1 1.8-2.2-1.8-2.2 1.8-2.1-1.8z" fill="currentColor"/><circle cx="9.5" cy="11" r="1.4" fill="#f4c63d" stroke="none"/><circle cx="14.5" cy="11" r="1.4" fill="#f4c63d" stroke="none"/>',
   sk_colere: '<path d="M13.5 2L5 13.5h6L9.5 22 19 9.5h-6z" fill="currentColor"/>',
+  gear: '<path d="M12 2.8l1.6 2.3 2.7-.7.5 2.8 2.6 1.2-1.1 2.6 1.1 2.6-2.6 1.2-.5 2.8-2.7-.7L12 21.2l-1.6-2.3-2.7.7-.5-2.8-2.6-1.2 1.1-2.6-1.1-2.6 2.6-1.2.5-2.8 2.7.7z" fill="#c9c2e6"/><circle cx="12" cy="12" r="3.2" fill="#3a2f63"/>',
+  t_devaste: '<path d="M12 2l2.2 5.4 5.6-1.6-3 5 4.6 3.2-5.6.8.8 5.8-4.6-3.6-4.6 3.6.8-5.8-5.6-.8 4.6-3.2-3-5 5.6 1.6z" fill="#ff9a3c"/>',
+  t_brise: '<path d="M12 3l7.5 3v5.5c0 4.6-3.2 8-7.5 9.5-4.3-1.5-7.5-4.9-7.5-9.5V6z" fill="#cfd6de"/><path d="M12 4l-2 5 3 2-2.5 4 1.5 5" stroke-width="2"/>',
+  t_bouclier: '<path d="M12 3l7.5 3v5.5c0 4.6-3.2 8-7.5 9.5-4.3-1.5-7.5-4.9-7.5-9.5V6z" fill="#7fd6ff"/><path d="M12 6.5v11" stroke="#fff" stroke-width="2"/>',
+  t_balayage: '<path d="M3.5 15a9 9 0 0 1 17 0" fill="none" stroke-width="3.2"/><path d="M3.5 15a9 9 0 0 1 17 0" fill="none" stroke="#ffd84a" stroke-width="1.6"/><path d="M18 11.5l3 3.8-4.6.6z" fill="#ffd84a"/>',
+  t_cri: '<path d="M5 8.5h4l5-4v15l-5-4H5z" fill="#ffd84a"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke-width="2"/>',
+  t_soin: '<path d="M12 20s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 7.6 4.2 4.2 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z" fill="#5fd38a"/><path d="M12 10v6M9 13h6" stroke="#fff" stroke-width="2.2"/>',
   dice: '<rect x="4" y="4" width="16" height="16" rx="3.5" fill="#efe4c8"/><circle cx="8.5" cy="8.5" r="1.4" fill="#1c130e"/><circle cx="15.5" cy="15.5" r="1.4" fill="#1c130e"/><circle cx="12" cy="12" r="1.4" fill="#1c130e"/>',
 };
 function icon(name, size) {

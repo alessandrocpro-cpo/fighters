@@ -3,7 +3,7 @@ import fs from 'fs'; import vm from 'vm'; import path from 'path';
 const dir = path.join(path.dirname(new URL(import.meta.url).pathname), '../src');
 const files = fs.readdirSync(dir).filter(f => /^[0-5]\d-.*\.js$/.test(f)).sort();
 const ctx = { console, Math, Date }; vm.createContext(ctx);
-vm.runInContext(files.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n') + '\n;globalThis.A={newHero,computeStats,makeEnemy,simulateFight,winChance,lootForFloor,makeRng,xpReward,xpToNext,grantXp,rollChoice,salvageValue,ORIGINS,starterWeapon,petStats,petSlots,makePet,teamPower,STAT_KEYS,WIN_HEAL,DEATH_XP_KEEP};', ctx);
+vm.runInContext(files.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n') + '\n;globalThis.A={newHero,computeStats,makeEnemy,simulateFight,winChance,lootForFloor,makeRng,xpReward,xpToNext,grantXp,rollChoice,salvageValue,ORIGINS,starterWeapon,petStats,petSlots,makePet,teamPower,STAT_KEYS,WIN_HEAL,DEATH_XP_KEEP,learnActive,ACTIVE_IDS,recommendLoadout,enemyTraits};', ctx);
 const A = ctx.A;
 const FIGHTS = +process.argv[2] || 2000, BOTS = +process.argv[3] || 4;
 const milestones = [5, 10, 20, 30, 50, 70, 100];
@@ -37,6 +37,7 @@ for (let b = 0; b < BOTS; b++) {
       }
       if (bestO.type === 'skill') hero.skills.push(bestO.id); else if (bestO.type === 'hp') hero.base.hp += bestO.v; else if (bestO.type === 'points') hero.points += bestO.v; else pets.push(A.makePet(r, hero.level, bestO.rarity, bestO.species));
     }
+    for (const id of ['devaste', 'bouclier', 'brise', 'cri', 'balayage', 'soin', 'devaste', 'bouclier', 'brise', 'cri', 'balayage', 'soin', 'devaste', 'bouclier', 'brise', 'cri', 'balayage', 'soin']) if (!A.learnActive(hero, id) && hero.tp < 1) break;
     while (hero.points > 0) { // glouton : le point qui augmente le plus la puissance
       let bk = 'str', bp = -1;
       for (const k of A.STAT_KEYS) { hero.base[k]++; const p = st().power; hero.base[k]--; if (p > bp) { bp = p; bk = k; } }
@@ -48,6 +49,7 @@ for (let b = 0; b < BOTS; b++) {
     let floor = Math.max(...portals), hp = st().maxHp, flasks = 3, runXp = 0, runLoot = [];
     while (true) {
       const en = A.makeEnemy(floor, world);
+      hero.loadout = A.recommendLoadout(hero, A.enemyTraits(en, st()));
       let wc = A.winChance(hero, eq, pets, hp, en, 24);
       while (wc < .6 && flasks > 0 && hp < st().maxHp * .7) { flasks--; hp = Math.min(st().maxHp, hp + Math.round(st().maxHp * .4)); wc = A.winChance(hero, eq, pets, hp, en, 24); }
       // retraite si l'espérance de gain de l'étage suivant < risque de perte (moitié de l'XP du run + butin)
