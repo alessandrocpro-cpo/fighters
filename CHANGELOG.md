@@ -5,7 +5,7 @@ Règle : on développe en continu (dépôt GitHub + page de test Claude). Une **
 ## Non publié (en cours)
 - (rien)
 
-## 0.6.0 — page de test Claude (2026-11-22)
+## 0.6.0 — release publique (2026-11-22)
 Refonte visuelle complète, toutes les mécaniques de la 0.5.3 conservées.
 - Style fantasy gothique steampunk au crépuscule, néons rose et cyan, panneaux sombres à coins coupés
 - 10 nouveaux mondes sombres (Pont des Flèches, Docks de Brume, Fonderie Écarlate, Toits Néon, Serres de Verre, Bas-Fonds Chimiques, Arène des Barons, Beffroi de Cendre, L'Observatoire, Le Sommet), dirigeables et particules
