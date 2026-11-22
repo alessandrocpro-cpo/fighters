@@ -5,6 +5,15 @@ Règle : on développe en continu (dépôt GitHub + page de test Claude). Une **
 ## Non publié (en cours)
 - (rien)
 
+## 0.6.0 — page de test Claude (2026-11-22)
+Refonte visuelle complète, toutes les mécaniques de la 0.5.3 conservées.
+- Style fantasy gothique steampunk au crépuscule, néons rose et cyan, panneaux sombres à coins coupés
+- 10 nouveaux mondes sombres (Pont des Flèches, Docks de Brume, Fonderie Écarlate, Toits Néon, Serres de Verre, Bas-Fonds Chimiques, Arène des Barons, Beffroi de Cendre, L'Observatoire, Le Sommet), dirigeables et particules
+- Nouveaux combattants chibi : cel-shading à liseré néon, gilet, sangles, bandages, gros poings ; coiffures Tresse et Crête, nouvelles couleurs
+- Combat plein écran : HUD par-dessus le décor, bannière au pinceau « Coup parfait » (et série de coups parfaits), cercle de réflexe « TAPE » / « PARE » avec main pour les premiers combats, jauge de rage néon, techniques en grands boutons (1 à 3), bouton pause (vitesse x1 à x3, passer le combat)
+- Le décor du palier en cours sert de fond flouté à toute l'app
+- Polices : Permanent Marker, Kalam, Barlow Semi Condensed
+
 ## 0.5.3 — release publique (2026-11-03)
 - Sac : bouton « Tout optimiser » (équipe le meilleur partout, démantèle les objets moins bons ; aperçu exact du résultat sur le bouton)
 - Chaque objet affiche son gain de puissance (▲ +N) ou ▼ s'il est moins bon : plus besoin d'ouvrir chaque objet. Aussi sur l'écran de victoire

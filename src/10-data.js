@@ -19,11 +19,11 @@ const ORIGINS = {
 
 const LOOK = {
   skin: ['#f7d6b5', '#e9b48a', '#c98b5e', '#9a6240', '#6b4029'],
-  hairStyles: ['meches', 'pics', 'longs', 'queue', 'court'],
-  hairStyleNames: { meches: 'Bataille', pics: 'Pics', longs: 'Longs', queue: 'Queue', court: 'Court' },
-  hairColors: ['#5a3020', '#2d2140', '#a8552a', '#ff7a3d', '#ffd84a', '#f4f0ff', '#4aa8ff'],
-  eyes: ['#7a4a2a', '#4aa8ff', '#3fbf7f', '#b06cff', '#ff5d6c'],
-  outfit: ['#c8302a', '#3d7dff', '#2fbf71', '#9b5cff', '#e89a1e', '#3a3550'],
+  hairStyles: ['pics', 'meches', 'longs', 'queue', 'court', 'tresse', 'crete'],
+  hairStyleNames: { pics: 'Pics', meches: 'Mèches', longs: 'Longs', queue: 'Queue', court: 'Court', tresse: 'Tresse', crete: 'Crête' },
+  hairColors: ['#241a33', '#7a3a26', '#ff5a3d', '#f2c94a', '#ece6ff', '#2f8cff', '#ff3d8b', '#9b5cff', '#2fd6b0'],
+  eyes: ['#3dc8ff', '#3fdf8f', '#c98a3c', '#b06cff', '#ff3d6c'],
+  outfit: ['#3a4a6a', '#7a2236', '#2f5a4a', '#4a2f6a', '#8a5a2a', '#2a2433'],
   builds: ['fin', 'normal', 'massif'],
   buildNames: { fin: 'Fin', normal: 'Normal', massif: 'Massif' },
 };
@@ -92,18 +92,21 @@ const SKILLS = {
 };
 const SKILL_IDS = Object.keys(SKILLS);
 
-/* Paliers de la tour (10 étages chacun) : chaque palier est un monde */
+/* Paliers de la tour (10 étages chacun) : chaque palier est un monde gothique sous un ciel de crépuscule.
+   sky = [haut, milieu, horizon], glow = source de lumière derrière le monument, far/mid = silhouettes,
+   stone = dalles du sol, crack = lueur dans les fissures, accent = néon, rim = liseré de contre-jour des personnages.
+   landmark = monument central, ships = dirigeables, motes = particules. */
 const TIERS = [
-  { name: 'Les Prés du Pied',       sky: ['#8fd3ff', '#d9f2ff'], far: '#7cc47a', mid: '#4f9e57', ground: '#8fcf6a', ground2: '#7dbd5b', accent: '#ffd84a', props: 'trees', flower: '#fff2b3' },
-  { name: 'Le Bois Murmurant',      sky: ['#6fc2c9', '#c9f0e6'], far: '#4f9f84', mid: '#2f7a62', ground: '#6fb98a', ground2: '#5fa877', accent: '#9dffcf', props: 'pines', flower: '#d6c6ff' },
-  { name: 'Le Canyon de Braise',    sky: ['#ff9b6a', '#ffe0b8'], far: '#d9744a', mid: '#a84a32', ground: '#e8a066', ground2: '#d98d55', accent: '#ff5a1f', props: 'rocks', flower: '#ffd84a' },
-  { name: 'Les Neiges Hautes',      sky: ['#9fc8ff', '#eef6ff'], far: '#c9dcf2', mid: '#7fa6d6', ground: '#f2f7ff', ground2: '#dfe9f7', accent: '#6fd8ff', props: 'crystals', flower: '#9fe8ff' },
-  { name: 'Les Jardins Suspendus',  sky: ['#ffb3d1', '#fff0f6'], far: '#f28ab3', mid: '#5aa86a', ground: '#9edb7a', ground2: '#8bcb68', accent: '#ff5d9e', props: 'blossoms', flower: '#ff9ec7' },
-  { name: 'Le Lagon Englouti',      sky: ['#5fd6e0', '#d6fbff'], far: '#4ab8c9', mid: '#2f8fa8', ground: '#f2dca0', ground2: '#e6cc8a', accent: '#2fe0d0', props: 'palms', flower: '#ff8a6a' },
-  { name: 'L\'Arène des Rois',      sky: ['#ffc86a', '#fff2cc'], far: '#e6b05a', mid: '#c48a3a', ground: '#f2cf86', ground2: '#e6bd70', accent: '#ffb81f', props: 'columns', flower: '#ff6f6f' },
-  { name: 'Les Cendres Pourpres',   sky: ['#9c7fd6', '#e6dcff'], far: '#7d6a9e', mid: '#56487a', ground: '#b6abc9', ground2: '#a397ba', accent: '#ff7ab6', props: 'rocks', flower: '#ff9ec7' },
-  { name: 'L\'Observatoire',        sky: ['#3a3f9e', '#8f8fe6'], far: '#5a5fb8', mid: '#3d3f8a', ground: '#8f93d6', ground2: '#7d81c6', accent: '#ffe66f', props: 'stars', flower: '#fff2b3' },
-  { name: 'Le Sommet',              sky: ['#ffd9a8', '#fff8ea'], far: '#ffffff', mid: '#f2e2c0', ground: '#fff6dc', ground2: '#f2e6c4', accent: '#ffb81f', props: 'clouds', flower: '#ffd84a' },
+  { name: 'Le Pont des Flèches',     sky: ['#3b2a6b', '#8a5a9e', '#f0a8c4'], glow: '#ffd2e6', far: '#6a4f8e', mid: '#3d2a5c', stone: '#5a4a6e', stone2: '#46385a', crack: '#ff3d8b', accent: '#ff4f9a', rim: '#ff7ab8', banner: '#8a1f3d', landmark: 'cathedral', ships: true, motes: 'embers', mote: '#ff9ec7' },
+  { name: 'Les Docks de Brume',      sky: ['#1d2f4a', '#3f6a7e', '#9fd4d0'], glow: '#c9fff4', far: '#3c5f6e', mid: '#1f3442', stone: '#4a5862', stone2: '#38444e', crack: '#2fe0d0', accent: '#3de8ff', rim: '#6ff0ff', banner: '#1f5a6a', landmark: 'cranes', ships: true, motes: 'rain', mote: '#bfefff' },
+  { name: 'La Fonderie Écarlate',    sky: ['#2a0f1c', '#7a2230', '#ff8a4a'], glow: '#ffc27a', far: '#5a2430', mid: '#2e1018', stone: '#5a3a3a', stone2: '#442a2c', crack: '#ff6a1f', accent: '#ff7a2f', rim: '#ffa25c', banner: '#a8301f', landmark: 'foundry', ships: false, motes: 'embers', mote: '#ffb35c' },
+  { name: 'Les Toits Néon',          sky: ['#120f2e', '#3a2366', '#c2459a'], glow: '#ff8ad0', far: '#3a2c6a', mid: '#1c1538', stone: '#3e3a58', stone2: '#2e2a44', crack: '#ff3dd0', accent: '#3dc8ff', rim: '#ff5ad6', banner: '#5a1f8a', landmark: 'rooftops', ships: true, motes: 'rain', mote: '#d6c6ff' },
+  { name: 'Les Serres de Verre',     sky: ['#14302a', '#2f6a4e', '#c8f2a0'], glow: '#eaffc9', far: '#356a50', mid: '#173428', stone: '#465a4e', stone2: '#34463c', crack: '#7dff6a', accent: '#9dff5c', rim: '#b6ff8a', banner: '#2f6a2a', landmark: 'domes', ships: false, motes: 'spores', mote: '#d6ff9e' },
+  { name: 'Les Bas-Fonds Chimiques', sky: ['#0f1a14', '#244a2e', '#7ad66a'], glow: '#c6ff9a', far: '#2c4a32', mid: '#12241a', stone: '#3e4a40', stone2: '#2e3830', crack: '#5aff3d', accent: '#c8ff2f', rim: '#a8ff6a', banner: '#4a5a1a', landmark: 'sewers', ships: false, motes: 'spores', mote: '#b6ff6a' },
+  { name: 'L\'Arène des Barons',     sky: ['#2a1410', '#7a3a1f', '#ffc46a'], glow: '#ffe2a8', far: '#6a3f26', mid: '#341a10', stone: '#6a5040', stone2: '#523c30', crack: '#ffb81f', accent: '#ffc83d', rim: '#ffd27a', banner: '#8a2a1a', landmark: 'arena', ships: true, motes: 'embers', mote: '#ffd27a' },
+  { name: 'Le Beffroi de Cendre',    sky: ['#1a1420', '#4a3446', '#d6908a'], glow: '#ffd0b8', far: '#4e3c4e', mid: '#231a26', stone: '#4e4450', stone2: '#3a323e', crack: '#ff5a5a', accent: '#ff6f6f', rim: '#ff9a8a', banner: '#5a1f2a', landmark: 'clocktower', ships: false, motes: 'ash', mote: '#e6d6d6' },
+  { name: 'L\'Observatoire',         sky: ['#070a24', '#1f2266', '#6a4fc8'], glow: '#c9b8ff', far: '#2a2a6a', mid: '#12123a', stone: '#3a3c66', stone2: '#2a2c4e', crack: '#8a7aff', accent: '#b9a4ff', rim: '#a68cff', banner: '#2a1f6a', landmark: 'observatory', ships: false, motes: 'stars', mote: '#fff6c9' },
+  { name: 'Le Sommet',               sky: ['#2a1f5a', '#b45a8a', '#ffd2a0'], glow: '#fff0d0', far: '#a86a9a', mid: '#4a2a5a', stone: '#6a5a7a', stone2: '#544664', crack: '#ffd84a', accent: '#ffcf4a', rim: '#ffe08a', banner: '#a8701f', landmark: 'summit', ships: true, motes: 'embers', mote: '#fff0b3' },
 ];
 const TOWER_TOP = 100;
 

@@ -1,6 +1,6 @@
 // Bot rogue-lite qui grimpe la tour avec les vraies règles. Usage : node tools/balance.mjs [combats] [runs-bot]
-import fs from 'fs'; import vm from 'vm'; import path from 'path';
-const dir = path.join(path.dirname(new URL(import.meta.url).pathname), '../src');
+import fs from 'fs'; import vm from 'vm'; import path from 'path'; import { fileURLToPath } from 'url';
+const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../src');
 const files = fs.readdirSync(dir).filter(f => /^[0-5]\d-.*\.js$/.test(f)).sort();
 const ctx = { console, Math, Date }; vm.createContext(ctx);
 vm.runInContext(files.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n') + '\n;globalThis.A={newHero,computeStats,makeEnemy,simulateFight,winChance,lootForFloor,makeRng,xpReward,xpToNext,grantXp,rollChoice,salvageValue,ORIGINS,starterWeapon,petStats,petSlots,makePet,teamPower,STAT_KEYS,WIN_HEAL,DEATH_XP_KEEP,learnActive,ACTIVE_IDS,recommendLoadout,enemyTraits};', ctx);

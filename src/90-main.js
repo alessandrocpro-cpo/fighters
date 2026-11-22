@@ -28,6 +28,7 @@ async function cloudInit() {
       const remote = JSON.parse(d.json);
       if (remote && remote.v === 2 && (!S || (remote.savedAt || 0) > (S.savedAt || 0))) {
         S = remote; _enemies = {}; try { localStorage.setItem(SAVE_KEY, d.json); } catch (e) { }
+        if (S.pendingFight) resolvePendingFight();
         if (!document.querySelector('.fight')) render();
         toast('Partie restaurée');
         return;
@@ -187,10 +188,17 @@ function optimizeAll(maxRarity) {
 const optText = r => [r.eq ? `${r.eq} équipé${r.eq > 1 ? 's' : ''}` : null, r.sold ? `${r.sold} démantelé${r.sold > 1 ? 's' : ''} (+${fmt(r.xp)} XP)` : null, r.lv ? `niveau ${r.to} !` : null].filter(Boolean).join(' · ');
 
 /* ---------- Rendu racine ---------- */
+/* Le décor du palier en cours sert de fond flouté à toute l'app */
+let _bdTier = null;
+function setBackdrop(f) {
+  const ti = tierIdx(f); if (_bdTier === ti) return; _bdTier = ti;
+  try { document.body.style.setProperty('--bd', `url(${arenaBackground(f, 1).toDataURL('image/jpeg', .8)})`); } catch (e) { /* fond uni de secours */ }
+}
 function render() {
   const app = document.getElementById('app');
   app.innerHTML = '';
   Music.set('menu');
+  setBackdrop(S ? (S.run ? S.run.floor : Math.max(...S.portals)) : 1);
   if (!S) { renderCreate(app); return; }
   const body = tab === 'tour' ? tabTour() : tab === 'heros' ? tabHero() : tabBag();
   app.append(renderTop(), body, renderNav());
@@ -247,11 +255,11 @@ function pickTip() {
   return want.find(k => !S.tips[k]);
 }
 function oddsInfo(wc) {
-  if (wc >= .85) return ['Écrasant', '#21a35a'];
-  if (wc >= .6) return ['Favorable', '#5fb84a'];
-  if (wc >= .4) return ['Incertain', '#e0a312'];
-  if (wc >= .2) return ['Risqué', '#f07a2a'];
-  return ['Suicidaire', '#e5484d'];
+  if (wc >= .85) return ['Écrasant', '#3dff9a'];
+  if (wc >= .6) return ['Favorable', '#9dff5c'];
+  if (wc >= .4) return ['Incertain', '#ffcf4a'];
+  if (wc >= .2) return ['Risqué', '#ff8a3d'];
+  return ['Suicidaire', '#ff3d6c'];
 }
 /* Sélecteur de techniques : 1 tap pour en changer, les conseillées contre cet adversaire sont signalées */
 function loadoutPicker(f, traits) {
@@ -346,15 +354,17 @@ function runSummary(L, compact) {
       h('div', null, h('span', null, 'XP'), h('b', null, '+' + fmt(L.xp) + (L.xpLost ? ` (−${fmt(L.xpLost)})` : ''))),
       h('div', null, h('span', null, 'Niveau'), h('b', null, L.to > L.from ? `${L.from} → ${L.to}` : L.to)),
       h('div', null, h('span', null, 'Butin'), h('b', null, L.reason === 'death' ? (L.lost ? `${L.lost} perdu${L.lost > 1 ? 's' : ''}` : '0') : `${L.secured} gardé${L.secured > 1 ? 's' : ''}`))),
-    L.equipped || L.sold ? h('div', { style: { fontSize: '13px', color: '#21a35a' } }, [L.equipped ? `${L.equipped} objet${L.equipped > 1 ? 's' : ''} plus fort${L.equipped > 1 ? 's' : ''} équipé${L.equipped > 1 ? 's' : ''}` : null, L.sold ? `${L.sold} objet${L.sold > 1 ? 's' : ''} inutile${L.sold > 1 ? 's' : ''} démantelé${L.sold > 1 ? 's' : ''} (+${fmt(L.soldXp)} XP)` : null].filter(Boolean).join(' · ') + '. Automatique.') : null,
+    L.equipped || L.sold ? h('div', { style: { fontSize: '13px', color: '#3dff9a' } }, [L.equipped ? `${L.equipped} objet${L.equipped > 1 ? 's' : ''} plus fort${L.equipped > 1 ? 's' : ''} équipé${L.equipped > 1 ? 's' : ''}` : null, L.sold ? `${L.sold} objet${L.sold > 1 ? 's' : ''} inutile${L.sold > 1 ? 's' : ''} démantelé${L.sold > 1 ? 's' : ''} (+${fmt(L.soldXp)} XP)` : null].filter(Boolean).join(' · ') + '. Automatique.') : null,
     S.hero.points || S.hero.tp || S.hero.choices ? h('button', { class: 'btn btn-sm btn-soul', onclick: () => { tab = 'heros'; heroSub = S.hero.points || S.hero.choices ? 'stats' : 'tech'; render(); } },
       [S.hero.points ? `${S.hero.points} points` : null, S.hero.tp ? `${S.hero.tp} technique${S.hero.tp > 1 ? 's' : ''}` : null, S.hero.choices ? 'Choix de la Brute' : null].filter(Boolean).join(' · ')) : null);
 }
 
-/* ---------- Combat interactif ---------- */
+/* ---------- Combat interactif ----------
+   Coup parfait sur tes attaques, parade sur les coups dangereux, techniques avec la rage. La seed est
+   enregistrée AVANT de jouer : recharger la page en plein combat le résout en automatique (même tirage). */
 async function startFight() {
   Sfx.init(); Sfx.on = S.sound;
-  try { await document.fonts.load('20px "Lilita One"'); } catch (e) { /* police de secours */ }
+  try { await Promise.all([document.fonts.load('20px "Permanent Marker"'), document.fonts.load('700 16px "Kalam"')]); } catch (e) { /* police de secours */ }
   const floor = S.run.floor, en = enemyAt(floor), seed = (Math.random() * 2 ** 31) | 0, lo = curLoadout(floor);
   const heroEnt = JSON.parse(JSON.stringify(heroFor(floor))), heroEq = JSON.parse(JSON.stringify(S.equip)), pets = JSON.parse(JSON.stringify(myPets()));
   S.pendingFight = { floor, seed, lo }; save(); // recharger la page ne permet pas d'annuler une défaite
@@ -367,57 +377,101 @@ function resolvePendingFight() {
   if (!P || !S.run || S.run.floor !== P.floor) return;
   const res = simulateFight(Object.assign({}, S.hero, { loadout: P.lo }), S.equip, myPets(), S.run.hp, enemyAt(P.floor), P.seed, { noEvents: true });
   const out = applyOutcome(enemyAt(P.floor), res); save();
-  toast(out.win ? `Combat de l'étage ${P.floor} terminé : victoire` : `Combat de l'étage ${P.floor} terminé : défaite`);
+  setTimeout(() => toast(`Combat de l'étage ${P.floor} terminé en automatique : ${out.win ? 'victoire' : 'défaite'}`), 300);
 }
+function floorHint(f) {
+  if (f % 10 === 0) return 'Boss du palier : bats-le pour ouvrir un portail.';
+  if (f % 5 === 0) return 'Sanctuaire après ce combat : vie et fioles restaurées.';
+  return 'Atteins le dernier étage de la tour !';
+}
+const CYAN_TECH = ['bouclier', 'soin'];
 function showFight(heroEnt, heroEq, pets, en, F, floor) {
   const app = document.getElementById('app');
   Music.set('fight');
   const U = F.info(), bars = {};
-  const side = (id, ent, eq, cls) => {
-    const petIds = Object.keys(U).filter(k => k[0] === id && k.length > 1);
-    bars[id] = hpBar(U[id].start != null ? U[id].start : U[id].max, U[id].max);
-    const minis = h('div', { class: 'minis' }); petIds.forEach(k => { const b = h('div', { class: 'mini' }, h('i', { style: { width: '100%' } })); bars[k] = b; minis.append(b); });
-    return h('div', { class: 'side ' + cls }, portrait(ent, eq, id === 'L' ? 1 : -1, 'pc'), h('div', { style: { minWidth: 0 } }, h('div', { class: 'nm' }, ent.name), bars[id], minis));
+  const hpb = () => h('div', { class: 'hpb' }, h('i', { class: 'trail' }), h('i', { class: 'fill' }), h('span', { class: 'num' }));
+  const setHpb = (b, cur, max) => { const p = clamp(cur / max, 0, 1) * 100 + '%'; b.children[0].style.width = p; b.children[1].style.width = p; b.children[2].textContent = `${fmt(Math.max(0, cur))} / ${fmt(max)}`; };
+  const side = (id, ent, eq) => {
+    bars[id] = hpb();
+    const minis = h('div', { class: 'minis' });
+    Object.keys(U).filter(k => k[0] === id && k.length > 1).forEach(k => { const b = h('div', { class: 'mini' }, h('i', { style: { width: '100%' } })); bars[k] = b; minis.append(b); });
+    return h('div', { class: 'fside ' + id }, h('div', { class: 'pframe' }, portrait(ent, eq, id === 'L' ? 1 : -1, 'pc')),
+      h('div', { class: 'pinfo' }, h('div', { class: 'nm' }, ent.name), bars[id], minis));
   };
   const canvas = h('canvas', { class: 'arena' });
-  const logBox = h('div', { class: 'flog' });
-  const rage = h('i'), rageTxt = h('span', { class: 'num' }, '0');
+  const pauseBtn = h('button', { class: 'pausebtn', 'aria-label': 'Pause' }, icon('pause', 26));
+  const banner = h('div', { class: 'fbanner' });
+  const rageFill = h('i'), rageVal = h('span', { class: 'rv num' }, `0 / ${RAGE.max}`), orbTag = h('span', { class: 'orbtag num' });
+  /* Techniques emportées : boutons néon (cyan = défense / soin, rose = attaque) */
   const tbtns = {};
-  const techRow = h('div', { class: 'techs' });
+  const abil = h('div', { class: 'abil n' + Math.max(1, Object.keys(F.actives).length) });
   for (const id of Object.keys(F.actives)) {
-    const A = ACTIVES[id];
-    const b = h('button', { class: 'tbtn', 'aria-label': A.name }, icon('t_' + id, 24), h('b', null, A.name), h('small', { class: 'num' }, A.cost));
-    b.onclick = () => { if (!F.canUse(id)) return; fp.queueActive(id); b.classList.add('queued'); Sfx.play('tap'); };
-    tbtns[id] = b; techRow.append(b);
+    const A = ACTIVES[id], rank = F.actives[id];
+    const b = h('button', { class: 'ab ' + (CYAN_TECH.includes(id) ? 'def' : 'off'), 'aria-label': A.name, onclick: () => {
+      if (!F.canUse(id) || fp.queue.includes(id)) { Sfx.play('miss'); return; }
+      fp.queueActive(id); b.classList.add('armed'); Sfx.play('tap');
+    } }, h('span', { class: 'abic' }, icon('t_' + id, 34)),
+      h('span', { class: 'abtx' }, h('b', null, A.name), h('small', null, A.short(rank))),
+      h('span', { class: 'cost num' }, icon('bolt', 18), A.cost), h('em', null, 'Lancé'));
+    tbtns[id] = b; abil.append(b);
   }
-  if (!techRow.children.length) techRow.append(h('div', { class: 'notech' }, 'Aucune technique emportée.'));
-  const orbTag = h('span', { class: 'orbtag num' });
-  const spd = h('button', { class: 'btn btn-sm btn-stone num' }, 'x' + S.speed);
-  const skip = h('button', { class: 'btn btn-sm btn-stone grow' }, 'Passer');
+  if (!abil.children.length) abil.append(h('div', { class: 'notech' }, 'Aucune technique emportée. Apprends-en dans Héros.'));
+  const inTier = (floor - 1) % 10 + 1;
   const root = h('div', { class: 'fight' },
-    h('div', { class: 'hud' }, side('L', heroEnt, heroEq, ''), h('div', { class: 'fl' }, 'Étage', h('b', { class: 'num' }, floor)), side('R', en, en.equip, 'r')),
     canvas,
-    h('div', { class: 'rage' }, h('span', { class: 'label' }, 'Rage'), h('div', { class: 'ragebar' }, rage), rageTxt, orbTag),
-    techRow, logBox, h('div', { class: 'fctl' }, spd, skip));
+    h('div', { class: 'fhud' }, side('L', heroEnt, heroEq), h('div', { class: 'fl' }, h('span', null, 'Étage'), h('b', { class: 'num' }, floor)), side('R', en, en.equip), pauseBtn),
+    banner,
+    h('div', { class: 'fbottom' },
+      h('div', { class: 'rage' }, h('span', { class: 'rl' }, 'Rage'), h('div', { class: 'rbar' }, rageFill), rageVal, orbTag),
+      abil,
+      h('div', { class: 'finfo' }, icon('info', 22), h('span', { class: 'grow' }, floorHint(floor)), h('span', { class: 'tw num' }, icon('tower', 22), `${inTier} / 10`))));
   app.append(root);
+  let bannerT = null, shownParry = false;
+  const showBanner = (title, sub, num, ms) => {
+    banner.innerHTML = '';
+    banner.append(h('div', { class: 'brush' }, h('h2', null, title), sub ? h('p', null, sub) : null), num != null ? h('div', { class: 'bnum num' }, num) : null);
+    banner.classList.remove('on'); void banner.offsetWidth; banner.classList.add('on');
+    clearTimeout(bannerT); bannerT = setTimeout(() => banner.classList.remove('on'), ms || 1400);
+  };
   const fp = new FightPlayer(canvas, {
-    F, heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, floor, speed: S.speed, tutorial: !S.tips.qte,
+    F, heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, floor, speed: S.speed,
     orbVal: Math.max(2, Math.round(xpReward(floor) * .06)),
-    onHp: hp => { for (const k in hp) { if (!bars[k]) continue; if (k.length === 1) setBar(bars[k], hp[k], U[k].max); else bars[k].firstChild.style.width = clamp(hp[k] / U[k].max, 0, 1) * 100 + '%'; } },
-    onLog: (t, sd) => { logBox.append(h('div', { class: sd }, t)); while (logBox.children.length > 2) logBox.firstChild.remove(); },
+    onHp: hp => { for (const k in hp) { if (!bars[k]) continue; if (k.length === 1) setHpb(bars[k], hp[k], U[k].max); else bars[k].firstChild.style.width = clamp(hp[k] / U[k].max, 0, 1) * 100 + '%'; } },
     onRage: F2 => {
-      const r = F2.rage(); rage.style.width = r + '%'; rageTxt.textContent = r;
-      for (const id in tbtns) { const b = tbtns[id], ok = F2.canUse(id); b.disabled = !ok && !fp.queue.includes(id); b.classList.toggle('ready', ok); b.style.setProperty('--p', Math.min(1, r / ACTIVES[id].cost)); if (!fp.queue.includes(id)) b.classList.remove('queued'); }
+      const r = F2.rage(); rageFill.style.width = r / RAGE.max * 100 + '%'; rageVal.textContent = `${r} / ${RAGE.max}`;
+      for (const id in tbtns) { const b = tbtns[id], q = fp.queue.includes(id); b.classList.toggle('ready', F2.canUse(id) || q); b.classList.toggle('armed', q); }
     },
-    onOrb: x => { orbTag.textContent = `+${x} XP bonus`; },
+    onOrb: x => { orbTag.textContent = `+${x} XP`; },
+    hint: () => (S.tips.qteN || 0) < 4,
+    onQteStart: (kind, n) => {
+      if (kind === 'perfect' && n === 1 && (S.tips.qteBanner || 0) < 3) { S.tips.qteBanner = (S.tips.qteBanner || 0) + 1; showBanner('Coup parfait', 'Tape quand le cercle se ferme', null, 1500); }
+      if (kind === 'parry' && !shownParry && (S.tips.parryBanner || 0) < 3) { shownParry = true; S.tips.parryBanner = (S.tips.parryBanner || 0) + 1; showBanner('Coup dangereux', 'Tape pour parer', null, 1300); }
+    },
+    onQte: (kind, ok, streak) => {
+      if (ok) S.tips.qteN = (S.tips.qteN || 0) + 1;
+      if (kind === 'perfect' && ok && streak >= 2) showBanner('Coup parfait', 'Série en cours', streak, 1100);
+    },
   });
   window.__fp = fp;
-  spd.onclick = () => { S.speed = S.speed >= 3 ? 1 : S.speed + 1; fp.speed = S.speed; spd.textContent = 'x' + S.speed; save(); };
-  skip.onclick = () => { skip.disabled = true; fp.skip(); };
+  setHpb(bars.L, U.L.start != null ? U.L.start : U.L.max, U.L.max); setHpb(bars.R, U.R.max, U.R.max);
+  showBanner(en.boss ? 'Boss' : `Étage ${floor}`, `${en.name}, ${en.title}`, null, 1300);
+  root.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; if (fp.tap(e)) e.preventDefault(); });
+  const openPause = () => {
+    fp.togglePause(true);
+    const spd = h('div', { class: 'row', style: { justifyContent: 'center' } }, [1, 2, 3].map(n => h('button', { class: 'pill' + (S.speed === n ? ' on' : ''), onclick: () => { S.speed = n; fp.speed = n; save(); ov.close(); openPause(); } }, 'x' + n)));
+    const ov = overlay(close => [
+      h('h2', null, 'Pause'),
+      h('div', { class: 'label', style: { textAlign: 'center' } }, 'Vitesse'), spd,
+      h('button', { class: 'btn btn-gold', onclick: () => { close(); fp.togglePause(false); } }, 'Reprendre'),
+      h('button', { class: 'btn btn-stone', onclick: () => { close(); fp.skip(); } }, 'Passer le combat'),
+      h('p', { style: { margin: 0, fontSize: '13px', textAlign: 'center', color: 'var(--muted)' } }, 'Passer joue la fin du combat en automatique : sans coup parfait ni parade, techniques lancées dès que possible.'),
+    ], { center: true, dismiss: false });
+  };
+  pauseBtn.onclick = openPause;
   fp.run().then(res => {
-    skip.disabled = true;
+    pauseBtn.disabled = true;
     res.orbXp = fp.orbXp;
-    if ((fp.qteN || 0) >= 3) S.tips.qte = 1;
+    if (fp.qteN >= 3) S.tips.qte = 1;
     const out = applyOutcome(en, res); S.pendingFight = null; save();
     setTimeout(() => out.win ? showVictory(out, fp, root) : showDeath(out, fp, root), fp.skipped ? 200 : 100);
   });
@@ -428,7 +482,7 @@ function lootRow(it, i, locked) {
   return h('div', { class: 'loot' + (it.bossPet ? ' legend' : ''), style: { animationDelay: (300 + i * 180) + 'ms' } },
     itemTile(it, { size: 30 }),
     h('div', { style: { minWidth: 0 } },
-      h('b', { style: { color: it.rarity ? mix(RARITIES[it.rarity].color, '#2a1f3d', .35) : 'var(--ink)' } }, it.name),
+      h('b', { style: { color: it.rarity ? RARITIES[it.rarity].color : 'var(--text)' } }, it.name),
       h('small', null, `${itemTypeName(it)} · ${RARITIES[it.rarity].name}${ms ? ' · ' + ms.k + ' ' + ms.v : ''}`)),
     (() => { const d = deltaFor(it); return h('span', { class: 'dl num ' + (d > 0 ? 'pos' : 'neg') }, d > 0 ? `▲ +${fmt(d)}` : 'moins bon'); })());
 }
@@ -547,7 +601,7 @@ function codexPanel() {
     const ico = icon(ic, 30); if (color && on) ico.style.color = color;
     return h('button', { class: 'ctile' + (on ? '' : ' off') + (legend && on ? ' legend' : ''), 'aria-label': title, onclick: () => overlay(close => [
       h('div', { class: 'row' }, h('div', { class: 'ctile' + (on ? '' : ' off'), style: { width: '64px', flex: 'none' } }, (() => { const i2 = icon(ic, 40); if (color && on) i2.style.color = color; return i2; })()),
-        h('div', { class: 'grow' }, h('h2', { style: { textAlign: 'left', fontSize: '24px' } }, title), h('div', { style: { fontSize: '13px', color: on ? '#16a34a' : 'var(--muted-ink)' } }, on ? 'Débloqué' : 'Verrouillé'))),
+        h('div', { class: 'grow' }, h('h2', { style: { textAlign: 'left', fontSize: '24px' } }, title), h('div', { style: { fontSize: '13px', color: on ? '#3dff9a' : 'var(--muted-ink)' } }, on ? 'Débloqué' : 'Verrouillé'))),
       h('p', { style: { margin: 0, lineHeight: 1.45 } }, desc),
       on ? null : h('div', { class: 'tip' }, icon('lock', 20), h('span', null, how)),
       h('button', { class: 'btn btn-stone', onclick: close }, 'Fermer')], { center: true }) }, ico);
@@ -668,21 +722,21 @@ function itemOwnLines(it) {
   if (it.slot === 'pet') {
     const p = petStats(it);
     [['PV', p.maxHp], ['Dégâts', Math.round(p.dmg)], ['Vitesse', round1(p.speed).toString().replace('.', ',')], ['Esquive', pct(p.evade)], ['Critique', pct(p.crit)]].forEach(([k, v]) => lines.append(h('div', { class: 'affix' }, h('span', null, k), h('b', { class: 'num' }, v))));
-    if (it.bossPet) lines.append(h('div', { class: 'affix' }, h('b', { style: { color: '#b07a00' } }, 'Exclusif de boss')));
+    if (it.bossPet) lines.append(h('div', { class: 'affix' }, h('b', { style: { color: '#ffcf4a' } }, 'Exclusif de boss')));
     return lines;
   }
   if (ms) lines.append(h('div', { class: 'affix' }, h('span', null, ms.k), h('b', { class: 'num' }, ms.v)));
   if (it.slot === 'armor' && ARMORS[it.base].evade) lines.append(h('div', { class: 'affix' }, h('span', null, 'Esquive'), h('b', null, '+' + pct(ARMORS[it.base].evade))));
   if (it.slot === 'armor' && ARMORS[it.base].spd) lines.append(h('div', { class: 'affix' }, h('span', null, 'Vitesse'), h('b', { class: 'delta-down' }, ARMORS[it.base].spd)));
   if (note) lines.append(h('div', { class: 'affix' }, h('span', null, note)));
-  for (const k in it.affixes) lines.append(h('div', { class: 'affix' }, h('b', { style: { color: '#2f6fd6' } }, affixText(k, it.affixes[k]))));
+  for (const k in it.affixes) lines.append(h('div', { class: 'affix' }, h('b', { style: { color: '#7fc8ff' } }, affixText(k, it.affixes[k]))));
   if (!lines.children.length) lines.append(h('div', { class: 'affix' }, h('span', null, 'Aucun bonus.')));
   return lines;
 }
 const SLOT_NAMES = { weapon: 'Arme', armor: 'Armure', tal1: 'Talisman I', tal2: 'Talisman II' };
 function openItem(it, equippedSlot, locked) {
   if (it.isNew && !locked) { it.isNew = false; save(); }
-  const rc = it.rarity ? mix(RARITIES[it.rarity].color, '#2a1f3d', .35) : 'var(--ink)';
+  const rc = it.rarity ? RARITIES[it.rarity].color : 'var(--text)';
   overlay(close => {
     const head = it.slot === 'pet' ? petPreview(it, 1, 'petbig', 1.5) : h('div', { class: 'ihead' }, itemTile(it, { size: 38 }));
     const els = [h('div', { class: 'row' }, head, h('div', { class: 'grow' },
@@ -733,7 +787,7 @@ function renderCreate(app) {
   const rebuildView = () => { view = makeView({ look: st.look }, { weapon: starterWeapon(st.origin) }, 'L', 0, 0); };
   rebuildView();
   const prev = h('canvas', { class: 'create-prev' });
-  attachPreview(prev, () => view, { zoom: .86, dy: 10 });
+  attachPreview(prev, () => view, { zoom: .74, dy: 12 });
   const sc = h('div', { class: 'scroll' });
   const nameIn = h('input', { class: 'namein', id: 'heroname', maxlength: 14, 'aria-label': 'Nom du héros' }); nameIn.value = st.name;
   nameIn.addEventListener('input', () => { st.name = nameIn.value; });
@@ -768,6 +822,7 @@ function boot(data) {
   if (S && !S.speed) S.speed = 2;
   if (S) { ensureCodex(); ensureHeroV3(S.hero); if (S.pendingFight) resolvePendingFight(); }
   if (S) { Sfx.on = S.sound !== false; Music.on = S.music !== false; }
+  if (S && S.pendingFight) resolvePendingFight();
   render();
   cloudInit();
 }

@@ -15,7 +15,7 @@ MVP jouable. Ouvrir `index.html` dans un navigateur (mobile ou desktop). Sauvega
 - **Collection** (onglet Héros) façon MyBrute : grille de tous les pouvoirs, armes, familiers et familiers de boss. Débloqué = tuile dorée, verrouillé = estompé, détail au toucher.
 
 ## Visuel
-Héros chibi manga originaux (tête énorme, trait encre épais extérieur / fin intérieur, cel-shading franc, reflets, grands yeux, kimono croisé, ceinture nouée, bottes). Rendu canvas jusqu'à 3x. Un monde lumineux par palier (prés, bois, canyon, neiges, jardins, lagon, arène, cendres, observatoire, sommet). Tout est dessiné en code.
+Fantasy gothique steampunk au crépuscule, néons rose et cyan. Combattants chibi originaux en cel-shading avec liseré néon (gilet, sangles, bandages, gros poings), grands yeux. Combat plein écran : décor du palier derrière, HUD par-dessus (portraits à coins coupés, barres inclinées, hexagone d'étage, bouton pause), bannière au pinceau (« Coup parfait »), cercle de réflexe avec « TAPE » / « PARE », jauge de rage et boutons de techniques néon (cyan = défense / soin, rose = attaque). 10 mondes sombres (Pont des Flèches, Docks de Brume, Fonderie Écarlate, Toits Néon, Serres de Verre, Bas-Fonds Chimiques, Arène des Barons, Beffroi de Cendre, L'Observatoire, Le Sommet), avec dirigeables et particules (pluie, braises, spores, cendres, étoiles). Le décor du palier sert de fond flouté à toute l'app. Polices : Permanent Marker (titres), Kalam (interface), Barlow Semi Condensed (texte). Tout est dessiné en code.
 
 ## Architecture (`src/`, assemblé par `node tools/build.mjs`)
 | Fichier | Rôle |
@@ -26,8 +26,8 @@ Héros chibi manga originaux (tête énorme, trait encre épais extérieur / fin
 | 30-loot | Objets et familiers |
 | 40-enemy | Adversaire fixe par étage + familiers + courbe de difficulté (`DIFF`) |
 | 50-combat | Moteur pas à pas déterministe (`createFight` : next/resolve/useActive/runAuto), coups pré-tirés |
-| 60-render-char | Héros manga + familiers (canin, félin, ours) |
-| 70-arena | Décors par palier, effets, bruitages, lecteur de combat |
+| 60-render-char | Combattants chibi cel-shading à liseré néon + familiers (canin, félin, ours) |
+| 70-arena | Décors par palier (2 couches + dirigeables), effets, bruitages, lecteur de combat interactif |
 | 75-music | Musique procédurale WebAudio : boucle menu (do majeur, 96 bpm) et boucle combat (la mineur, 142 bpm), fondu enchaîné |
 | 80-ui | Composants DOM réutilisables |
 | 90-main | État, run, écrans |
@@ -35,7 +35,6 @@ Héros chibi manga originaux (tête énorme, trait encre épais extérieur / fin
 ## Outils
 - `node tools/build.mjs` : génère `dist/index.html` (autonome) et `dist/artifact.html`.
 - `node tools/balance.mjs 2500 4` : bot rogue-lite (répartition gloutonne, retraite quand le risque dépasse le gain attendu).
-- `node tools/e2e.cjs <dossier>` : parcours complet mobile + captures (Playwright).
 
 ## Réglages
 - `DIFF` (40-enemy), `xpToNext`, `xpReward`, `WIN_HEAL` (20-character), `POINTS_PER_LEVEL`, `CHOICE_EVERY`, `DEATH_XP_KEEP`, `PET_SLOT_LEVELS`, `BOSS_PET_CHANCE` (10-data).
