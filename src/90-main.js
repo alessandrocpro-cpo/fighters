@@ -255,11 +255,11 @@ function pickTip() {
   return want.find(k => !S.tips[k]);
 }
 function oddsInfo(wc) {
-  if (wc >= .85) return ['Écrasant', '#3dff9a'];
-  if (wc >= .6) return ['Favorable', '#9dff5c'];
-  if (wc >= .4) return ['Incertain', '#ffcf4a'];
-  if (wc >= .2) return ['Risqué', '#ff8a3d'];
-  return ['Suicidaire', '#ff3d6c'];
+  if (wc >= .85) return ['Écrasant', '#94e2bd'];
+  if (wc >= .6) return ['Favorable', '#c8e89a'];
+  if (wc >= .4) return ['Incertain', '#ffdb8f'];
+  if (wc >= .2) return ['Risqué', '#ffb994'];
+  return ['Suicidaire', '#ff9b9b'];
 }
 /* Sélecteur de techniques : 1 tap pour en changer, les conseillées contre cet adversaire sont signalées */
 function loadoutPicker(f, traits) {
@@ -354,7 +354,7 @@ function runSummary(L, compact) {
       h('div', null, h('span', null, 'XP'), h('b', null, '+' + fmt(L.xp) + (L.xpLost ? ` (−${fmt(L.xpLost)})` : ''))),
       h('div', null, h('span', null, 'Niveau'), h('b', null, L.to > L.from ? `${L.from} → ${L.to}` : L.to)),
       h('div', null, h('span', null, 'Butin'), h('b', null, L.reason === 'death' ? (L.lost ? `${L.lost} perdu${L.lost > 1 ? 's' : ''}` : '0') : `${L.secured} gardé${L.secured > 1 ? 's' : ''}`))),
-    L.equipped || L.sold ? h('div', { style: { fontSize: '13px', color: '#3dff9a' } }, [L.equipped ? `${L.equipped} objet${L.equipped > 1 ? 's' : ''} plus fort${L.equipped > 1 ? 's' : ''} équipé${L.equipped > 1 ? 's' : ''}` : null, L.sold ? `${L.sold} objet${L.sold > 1 ? 's' : ''} inutile${L.sold > 1 ? 's' : ''} démantelé${L.sold > 1 ? 's' : ''} (+${fmt(L.soldXp)} XP)` : null].filter(Boolean).join(' · ') + '. Automatique.') : null,
+    L.equipped || L.sold ? h('div', { style: { fontSize: '13px', color: '#94e2bd' } }, [L.equipped ? `${L.equipped} objet${L.equipped > 1 ? 's' : ''} plus fort${L.equipped > 1 ? 's' : ''} équipé${L.equipped > 1 ? 's' : ''}` : null, L.sold ? `${L.sold} objet${L.sold > 1 ? 's' : ''} inutile${L.sold > 1 ? 's' : ''} démantelé${L.sold > 1 ? 's' : ''} (+${fmt(L.soldXp)} XP)` : null].filter(Boolean).join(' · ') + '. Automatique.') : null,
     S.hero.points || S.hero.tp || S.hero.choices ? h('button', { class: 'btn btn-sm btn-soul', onclick: () => { tab = 'heros'; heroSub = S.hero.points || S.hero.choices ? 'stats' : 'tech'; render(); } },
       [S.hero.points ? `${S.hero.points} points` : null, S.hero.tp ? `${S.hero.tp} technique${S.hero.tp > 1 ? 's' : ''}` : null, S.hero.choices ? 'Choix de la Brute' : null].filter(Boolean).join(' · ')) : null);
 }
@@ -364,7 +364,7 @@ function runSummary(L, compact) {
    enregistrée AVANT de jouer : recharger la page en plein combat le résout en automatique (même tirage). */
 async function startFight() {
   Sfx.init(); Sfx.on = S.sound;
-  try { await Promise.all([document.fonts.load('20px "Permanent Marker"'), document.fonts.load('700 16px "Kalam"')]); } catch (e) { /* police de secours */ }
+  try { await Promise.all([document.fonts.load('20px "Permanent Marker"'), document.fonts.load('700 16px "Barlow Semi Condensed"')]); } catch (e) { /* police de secours */ }
   const floor = S.run.floor, en = enemyAt(floor), seed = (Math.random() * 2 ** 31) | 0, lo = curLoadout(floor);
   const heroEnt = JSON.parse(JSON.stringify(heroFor(floor))), heroEq = JSON.parse(JSON.stringify(S.equip)), pets = JSON.parse(JSON.stringify(myPets()));
   S.pendingFight = { floor, seed, lo }; save(); // recharger la page ne permet pas d'annuler une défaite
@@ -601,7 +601,7 @@ function codexPanel() {
     const ico = icon(ic, 30); if (color && on) ico.style.color = color;
     return h('button', { class: 'ctile' + (on ? '' : ' off') + (legend && on ? ' legend' : ''), 'aria-label': title, onclick: () => overlay(close => [
       h('div', { class: 'row' }, h('div', { class: 'ctile' + (on ? '' : ' off'), style: { width: '64px', flex: 'none' } }, (() => { const i2 = icon(ic, 40); if (color && on) i2.style.color = color; return i2; })()),
-        h('div', { class: 'grow' }, h('h2', { style: { textAlign: 'left', fontSize: '24px' } }, title), h('div', { style: { fontSize: '13px', color: on ? '#3dff9a' : 'var(--muted-ink)' } }, on ? 'Débloqué' : 'Verrouillé'))),
+        h('div', { class: 'grow' }, h('h2', { style: { textAlign: 'left', fontSize: '24px' } }, title), h('div', { style: { fontSize: '13px', color: on ? '#94e2bd' : 'var(--muted-ink)' } }, on ? 'Débloqué' : 'Verrouillé'))),
       h('p', { style: { margin: 0, lineHeight: 1.45 } }, desc),
       on ? null : h('div', { class: 'tip' }, icon('lock', 20), h('span', null, how)),
       h('button', { class: 'btn btn-stone', onclick: close }, 'Fermer')], { center: true }) }, ico);
@@ -722,7 +722,7 @@ function itemOwnLines(it) {
   if (it.slot === 'pet') {
     const p = petStats(it);
     [['PV', p.maxHp], ['Dégâts', Math.round(p.dmg)], ['Vitesse', round1(p.speed).toString().replace('.', ',')], ['Esquive', pct(p.evade)], ['Critique', pct(p.crit)]].forEach(([k, v]) => lines.append(h('div', { class: 'affix' }, h('span', null, k), h('b', { class: 'num' }, v))));
-    if (it.bossPet) lines.append(h('div', { class: 'affix' }, h('b', { style: { color: '#ffcf4a' } }, 'Exclusif de boss')));
+    if (it.bossPet) lines.append(h('div', { class: 'affix' }, h('b', { style: { color: '#ffdb8f' } }, 'Exclusif de boss')));
     return lines;
   }
   if (ms) lines.append(h('div', { class: 'affix' }, h('span', null, ms.k), h('b', { class: 'num' }, ms.v)));

@@ -72,10 +72,10 @@ const AFFIX_POOL = {
 };
 
 const RARITIES = [
-  { name: 'Commun',     color: '#a9a3b8', mult: 1,    affixes: 0 },
-  { name: 'Rare',       color: '#3d9bff', mult: 1.15, affixes: 1 },
-  { name: 'Épique',     color: '#b45cff', mult: 1.32, affixes: 2 },
-  { name: 'Légendaire', color: '#ffb81f', mult: 1.55, affixes: 3 },
+  { name: 'Commun',     color: '#c3c7d6', mult: 1,    affixes: 0 },
+  { name: 'Rare',       color: '#9cc9ff', mult: 1.15, affixes: 1 },
+  { name: 'Épique',     color: '#c9b8ff', mult: 1.32, affixes: 2 },
+  { name: 'Légendaire', color: '#ffd27a', mult: 1.55, affixes: 3 },
 ];
 
 const SKILLS = {
@@ -97,10 +97,10 @@ const SKILL_IDS = Object.keys(SKILLS);
    stone = dalles du sol, crack = lueur dans les fissures, accent = néon, rim = liseré de contre-jour des personnages.
    landmark = monument central, ships = dirigeables, motes = particules. */
 const TIERS = [
-  { name: 'Le Pont des Flèches',     sky: ['#3b2a6b', '#8a5a9e', '#f0a8c4'], glow: '#ffd2e6', far: '#6a4f8e', mid: '#3d2a5c', stone: '#5a4a6e', stone2: '#46385a', crack: '#ff3d8b', accent: '#ff4f9a', rim: '#ff7ab8', banner: '#8a1f3d', landmark: 'cathedral', ships: true, motes: 'embers', mote: '#ff9ec7' },
+  { name: 'Le Pont des Flèches',     sky: ['#2f2d5c', '#6a5f94', '#e7c3a8'], glow: '#ffe6cc', far: '#5a5584', mid: '#353258', stone: '#55526c', stone2: '#45425a', crack: '#ffc49c', accent: '#ffcfa8', rim: '#ffd9bc', banner: '#4f5a8a', landmark: 'cathedral', ships: true, motes: 'embers', mote: '#ffd9b8' },
   { name: 'Les Docks de Brume',      sky: ['#1d2f4a', '#3f6a7e', '#9fd4d0'], glow: '#c9fff4', far: '#3c5f6e', mid: '#1f3442', stone: '#4a5862', stone2: '#38444e', crack: '#2fe0d0', accent: '#3de8ff', rim: '#6ff0ff', banner: '#1f5a6a', landmark: 'cranes', ships: true, motes: 'rain', mote: '#bfefff' },
   { name: 'La Fonderie Écarlate',    sky: ['#2a0f1c', '#7a2230', '#ff8a4a'], glow: '#ffc27a', far: '#5a2430', mid: '#2e1018', stone: '#5a3a3a', stone2: '#442a2c', crack: '#ff6a1f', accent: '#ff7a2f', rim: '#ffa25c', banner: '#a8301f', landmark: 'foundry', ships: false, motes: 'embers', mote: '#ffb35c' },
-  { name: 'Les Toits Néon',          sky: ['#120f2e', '#3a2366', '#c2459a'], glow: '#ff8ad0', far: '#3a2c6a', mid: '#1c1538', stone: '#3e3a58', stone2: '#2e2a44', crack: '#ff3dd0', accent: '#3dc8ff', rim: '#ff5ad6', banner: '#5a1f8a', landmark: 'rooftops', ships: true, motes: 'rain', mote: '#d6c6ff' },
+  { name: 'Les Toits Néon',          sky: ['#14173a', '#2f3170', '#7f72c4'], glow: '#c9b8ff', far: '#3a2c6a', mid: '#1c1538', stone: '#3e3a58', stone2: '#2e2a44', crack: '#b9a8ff', accent: '#3dc8ff', rim: '#c9b8ff', banner: '#5a1f8a', landmark: 'rooftops', ships: true, motes: 'rain', mote: '#d6c6ff' },
   { name: 'Les Serres de Verre',     sky: ['#14302a', '#2f6a4e', '#c8f2a0'], glow: '#eaffc9', far: '#356a50', mid: '#173428', stone: '#465a4e', stone2: '#34463c', crack: '#7dff6a', accent: '#9dff5c', rim: '#b6ff8a', banner: '#2f6a2a', landmark: 'domes', ships: false, motes: 'spores', mote: '#d6ff9e' },
   { name: 'Les Bas-Fonds Chimiques', sky: ['#0f1a14', '#244a2e', '#7ad66a'], glow: '#c6ff9a', far: '#2c4a32', mid: '#12241a', stone: '#3e4a40', stone2: '#2e3830', crack: '#5aff3d', accent: '#c8ff2f', rim: '#a8ff6a', banner: '#4a5a1a', landmark: 'sewers', ships: false, motes: 'spores', mote: '#b6ff6a' },
   { name: 'L\'Arène des Barons',     sky: ['#2a1410', '#7a3a1f', '#ffc46a'], glow: '#ffe2a8', far: '#6a3f26', mid: '#341a10', stone: '#6a5040', stone2: '#523c30', crack: '#ffb81f', accent: '#ffc83d', rim: '#ffd27a', banner: '#8a2a1a', landmark: 'arena', ships: true, motes: 'embers', mote: '#ffd27a' },

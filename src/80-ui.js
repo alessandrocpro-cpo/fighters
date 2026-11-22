@@ -46,9 +46,9 @@ const ICONS = {
   portal: '<ellipse cx="12" cy="12" rx="6.5" ry="9" fill="#b06cff"/><ellipse cx="12" cy="12" rx="3.5" ry="6" fill="#e6d6ff"/>',
   plus: '<path d="M12 5v14M5 12h14" stroke-width="3"/>',
   minus: '<path d="M5 12h14" stroke-width="3"/>',
-  shield: '<path d="M12 2.8l7.5 2.8v5.6c0 5-3.2 8.6-7.5 10.2-4.3-1.6-7.5-5.2-7.5-10.2V5.6z" fill="#3dc8ff"/><path d="M12 5.4l5 1.9v4c0 3.5-2.1 6-5 7.3z" fill="#c9f2ff" stroke-width="1"/>',
+  shield: '<path d="M12 2.8l7.5 2.8v5.6c0 5-3.2 8.6-7.5 10.2-4.3-1.6-7.5-5.2-7.5-10.2V5.6z" fill="#9cc9ff"/><path d="M12 5.4l5 1.9v4c0 3.5-2.1 6-5 7.3z" fill="#c9f2ff" stroke-width="1"/>',
   fist: '<path d="M6.5 9.5c0-1.4 1-2.3 2.2-2.3h.8c.2-1.1 1-1.9 2.1-1.9s1.8.6 2.1 1.4c.4-.4.9-.6 1.5-.6 1.2 0 2 .9 2 2v.4c.3-.1.6-.2 1-.2 1.1 0 1.9.9 1.9 2v4.3c0 3.4-2.6 5.9-6 5.9h-1.6c-3.3 0-5.9-2.6-5.9-5.9z" fill="#ffd3e2"/><path d="M9.6 7.2v4M13 6.8v4.4M16.2 8.2v3.6M6.6 12.5c1.6-.4 3.3.1 4.4 1.4" stroke-width="1.3"/>',
-  bolt: '<path d="M13.5 2.5L5 13.5h6l-1.5 8 8.5-11h-6z" fill="#ffcf4a"/>',
+  bolt: '<path d="M13.5 2.5L5 13.5h6l-1.5 8 8.5-11h-6z" fill="#ffdb8f"/>',
   pause: '<rect x="6" y="4.5" width="4" height="15" rx="1" fill="#ffffff"/><rect x="14" y="4.5" width="4" height="15" rx="1" fill="#ffffff"/>',
   info: '<circle cx="12" cy="12" r="9" fill="#ffffff"/><path d="M12 10.5v6.5" stroke-width="2.4"/><circle cx="12" cy="7.3" r="1.4" fill="#1a1024" stroke="none"/>',
   sk_souffle: '<path d="M12 20s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 7.6 4.2 4.2 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z" fill="currentColor"/><path d="M12 10v6M9 13h6" stroke="#f4c63d" stroke-width="2.2"/>',
@@ -77,7 +77,7 @@ function icon(name, size) {
   return span;
 }
 const itemIcon = it => it.slot === 'pet' ? 'paw' : it.base;
-const rarityBg = r => [`#2e2740`, `#1c3352`, `#3a2155`, `#4a3618`][r];
+const rarityBg = r => [`#2c3049`, `#263a55`, `#363159`, `#463d28`][r];
 
 function xpTag(n, size) { return h('span', { class: 'soulc num' }, icon('xp', size || 20), fmt(n) + ' XP'); }
 

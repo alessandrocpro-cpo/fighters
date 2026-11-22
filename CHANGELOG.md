@@ -5,6 +5,14 @@ Règle : on développe en continu (dépôt GitHub + page de test Claude). Une **
 ## Non publié (en cours)
 - (rien)
 
+## 0.6.1 — release publique (2026-11-22)
+Interface en flat design pastel : le rose néon gênait la lecture.
+- Fonds unis gris-bleu, coins arrondis, plus de dégradés, halos ni contours néon
+- Une couleur = un sens : beurre (action principale, XP), ciel (défense, info), menthe (positif, PV du héros), pêche (attaque, rage), corail (danger, PV adverses), lavande (choix secondaire)
+- Texte d'interface en Barlow Semi Condensed (plus net) ; la police pinceau reste pour les grands titres
+- Combat : HUD sur cartes sombres lisibles, boutons de techniques pleins quand ils sont prêts, cercle de réflexe beurre / ciel, textes sans halo
+- Raretés en pastel ; décors des Pont des Flèches et Toits Néon adoucis (moins de rose)
+
 ## 0.6.0 — release publique (2026-11-22)
 Refonte visuelle complète, toutes les mécaniques de la 0.5.3 conservées.
 - Style fantasy gothique steampunk au crépuscule, néons rose et cyan, panneaux sombres à coins coupés

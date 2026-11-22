@@ -1,7 +1,7 @@
 /* ===== RENDU : héros chibi gothique (grosse tête, corps trapu) + familiers.
    Ombre violette décalée, contour encre fin, liseré de contre-jour néon (RIM) côté dos. ===== */
 const INK = '#1a1024';
-let RIM = '#ff7ab8'; // couleur du contre-jour, réglée par l'arène selon le palier
+let RIM = '#c9b8ff'; // couleur du contre-jour, réglée par l'arène selon le palier
 const _rgb = h => { h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; };
 function mix(a, b, t) { const A = _rgb(a), B = _rgb(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); }
 const _sc = {};
@@ -100,7 +100,7 @@ function drawWeapon(c, kind, rar) {
   } else if (kind === 'lance') {
     cel(c, Pth.capsule(-24, 0, 46, 0, 1.9, 1.9), WOOD, { lw: 1.8 });
     blade(Pth.poly([44, 0, 50, -4.5, 61, 0, 50, 4.5]));
-    cel(c, Pth.poly([41, -1, 44, 7, 38, 9]), '#ff3d8b', { lw: 1.4 });
+    cel(c, Pth.poly([41, -1, 44, 7, 38, 9]), '#ffb994', { lw: 1.4 });
   }
 }
 
@@ -158,7 +158,7 @@ function drawHairBack(c, L) {
   if (L.hair === 'tresse') {
     // une seule natte qui tombe dans le dos, maillons tressés
     for (let i = 0; i < 7; i++) { const y = 4 + i * 6.4, x = -15 - Math.sin(i * .5) * 2.5 - i * .5; cel(c, Pth.ellipse(x, y, 5.2 - i * .3, 4.4, i % 2 ? .5 : -.5), L.hairColor, { lw: 1.6 }); }
-    cel(c, Pth.rrect(-21, 47, 8, 4, 1.5), '#ff3d8b', { lw: 1.4 });
+    cel(c, Pth.rrect(-21, 47, 8, 4, 1.5), '#ffb994', { lw: 1.4 });
     cel(c, cc => { cc.moveTo(-19, 51); cc.lineTo(-23, 60); cc.lineTo(-17, 56); cc.lineTo(-13, 61); cc.lineTo(-14, 51); cc.closePath(); }, L.hairColor, { lw: 1.4 });
   }
 }
@@ -434,7 +434,7 @@ function previewLoop(t) {
     c.setTransform(s, 0, 0, s, cv.width / 2 + (it.opts.dx || 0) * s, ty);
     v.x = 0; v.y = 0;
     updateView(v, 16);
-    const rim = RIM; RIM = it.opts.rim || '#ff7ab8';
+    const rim = RIM; RIM = it.opts.rim || '#c9b8ff';
     drawFighter(c, v, t);
     RIM = rim;
   }

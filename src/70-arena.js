@@ -423,14 +423,14 @@ class FightPlayer {
     const tgt = (cur, on) => clamp(cur + (on ? .08 : -.05), 0, 1);
     hv.guard = tgt(hv.guard || 0, U && U.L.shield > 0);
     hv.power = tgt(hv.power || 0, (U && U.L.devastate) || hv.charge > 0);
-    if (hv.guard > 0) { c.save(); c.globalAlpha = .55 * hv.guard; const g = c.createRadialGradient(hv.x, this.chest(hv), 10, hv.x, this.chest(hv), 80); g.addColorStop(0, 'rgba(61,200,255,0)'); g.addColorStop(.7, 'rgba(61,200,255,.35)'); g.addColorStop(1, 'rgba(61,200,255,0)'); c.fillStyle = g; c.beginPath(); c.arc(hv.x, this.chest(hv), 80, 0, TAU); c.fill(); c.restore(); }
-    if (hv.power > 0) { c.save(); c.globalAlpha = (.45 + .2 * Math.sin(now / 90)) * hv.power; const g = c.createRadialGradient(hv.x, this.chest(hv), 10, hv.x, this.chest(hv), 90); g.addColorStop(0, 'rgba(255,61,139,.55)'); g.addColorStop(1, 'rgba(255,61,139,0)'); c.fillStyle = g; c.beginPath(); c.arc(hv.x, this.chest(hv), 90, 0, TAU); c.fill(); c.restore(); }
+    if (hv.guard > 0) { c.save(); c.globalAlpha = .55 * hv.guard; const g = c.createRadialGradient(hv.x, this.chest(hv), 10, hv.x, this.chest(hv), 80); g.addColorStop(0, 'rgba(156,201,255,0)'); g.addColorStop(.7, 'rgba(156,201,255,.35)'); g.addColorStop(1, 'rgba(156,201,255,0)'); c.fillStyle = g; c.beginPath(); c.arc(hv.x, this.chest(hv), 80, 0, TAU); c.fill(); c.restore(); }
+    if (hv.power > 0) { c.save(); c.globalAlpha = (.45 + .2 * Math.sin(now / 90)) * hv.power; const g = c.createRadialGradient(hv.x, this.chest(hv), 10, hv.x, this.chest(hv), 90); g.addColorStop(0, 'rgba(255,185,148,.5)'); g.addColorStop(1, 'rgba(255,185,148,0)'); c.fillStyle = g; c.beginPath(); c.arc(hv.x, this.chest(hv), 90, 0, TAU); c.fill(); c.restore(); }
     const order = Object.values(this.v).sort((a, b) => (b.pose.rot ? 1 : 0) - (a.pose.rot ? 1 : 0) || a.y - b.y);
     for (const v of order) {
       if (v.glow > 0) { const g = c.createRadialGradient(v.x, this.chest(v), 5, v.x, this.chest(v), 70); g.addColorStop(0, `rgba(120,255,160,${.55 * v.glow})`); g.addColorStop(1, 'rgba(120,255,160,0)'); c.fillStyle = g; c.fillRect(v.x - 80, v.y - 160, 160, 190); }
       if (v.flash > 0) this.drawFlashed(c, v, now); else drawFighter(c, v, now);
     }
-    if (hv.guard > 0) { c.save(); c.globalAlpha = .8 * hv.guard; c.strokeStyle = '#7fe0ff'; c.shadowColor = '#3dc8ff'; c.shadowBlur = 12; c.lineWidth = 2; c.beginPath(); c.ellipse(hv.x, this.chest(hv) - 6, 46, 72, 0, 0, TAU); c.stroke(); c.restore(); }
+    if (hv.guard > 0) { c.save(); c.globalAlpha = .8 * hv.guard; c.strokeStyle = '#9cc9ff'; c.shadowColor = '#9cc9ff'; c.shadowBlur = 0; c.lineWidth = 2; c.beginPath(); c.ellipse(hv.x, this.chest(hv) - 6, 46, 72, 0, 0, TAU); c.stroke(); c.restore(); }
     this.drawFx(c, dt);
     this.drawOrbs(c, now);
     if (this.qte && !this.qte.done) this.drawQte(c, now);
@@ -450,7 +450,7 @@ class FightPlayer {
         m.y += (up ? -.018 : .02) * m.s * dt; m.x += Math.sin(now / 800 + m.ph) * .2;
         if (m.y < -EXT) m.y = AH + 20; if (m.y > AH + 40) m.y = -EXT;
         c.globalAlpha = .75; c.fillStyle = T.mote;
-        if (kind === 'embers') { c.shadowColor = T.mote; c.shadowBlur = 6; }
+        if (kind === 'embers') { c.shadowColor = T.mote; c.shadowBlur = 0; }
         c.beginPath(); c.arc(m.x, m.y, (kind === 'ash' ? 1.6 : 1.3) * m.s, 0, TAU); c.fill();
       }
     }
@@ -464,22 +464,22 @@ class FightPlayer {
         f.x += f.vx * dt; f.y += f.vy * dt; f.vy += (f.kind === 'dust' ? -.0002 : .0007) * dt;
         c.globalAlpha = 1 - k;
         if (f.kind === 'dust') { c.beginPath(); c.arc(f.x, f.y, f.s * (1 + k * 2), 0, TAU); c.fillStyle = f.col; c.fill(); }
-        else { c.save(); c.translate(f.x, f.y); c.rotate(f.rot + k * 3); c.fillStyle = f.col; c.shadowColor = f.col; c.shadowBlur = 6; c.beginPath(); c.rect(-f.s, -f.s * .35, f.s * 2, f.s * .7); c.fill(); c.restore(); }
+        else { c.save(); c.translate(f.x, f.y); c.rotate(f.rot + k * 3); c.fillStyle = f.col; c.shadowColor = f.col; c.shadowBlur = 0; c.beginPath(); c.rect(-f.s, -f.s * .35, f.s * 2, f.s * .7); c.fill(); c.restore(); }
         c.globalAlpha = 1;
       } else if (f.kind === 'impact') {
         const r = (10 + 28 * Ease.outCubic(k)) * f.s;
         c.save(); c.translate(f.x, f.y); c.rotate(f.rot); c.globalAlpha = 1 - k * k;
         c.beginPath(); for (let i = 0; i < 16; i++) { const a = i * TAU / 16, rr = i % 2 ? r * .42 : r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath();
-        c.shadowColor = '#ff3d8b'; c.shadowBlur = 16; c.fillStyle = '#fff2f8'; c.fill(); c.shadowBlur = 0; c.lineWidth = 2; c.strokeStyle = INK; c.stroke();
+        c.shadowColor = '#ffb994'; c.shadowBlur = 0; c.fillStyle = '#fff6ea'; c.fill(); c.shadowBlur = 0; c.lineWidth = 2; c.strokeStyle = INK; c.stroke();
         c.restore(); c.globalAlpha = 1;
       } else if (f.kind === 'slash') {
         const R = f.small ? 26 : 44;
         c.save(); c.translate(f.x, f.y); c.scale(f.face, 1); c.globalAlpha = 1 - k;
         c.beginPath(); c.arc(0, 18, R, -2.2 + k * .6, .3 + k * .3); c.arc(0, 22, R * .78, .3 + k * .3, -2.2 + k * .6, true); c.closePath();
-        c.shadowColor = '#ff6fb0'; c.shadowBlur = 12; c.fillStyle = '#ffffff'; c.fill();
+        c.shadowColor = '#ffb994'; c.shadowBlur = 0; c.fillStyle = '#ffffff'; c.fill();
         c.restore(); c.globalAlpha = 1;
       } else if (f.kind === 'ring') {
-        c.save(); c.globalAlpha = 1 - k; c.strokeStyle = f.col; c.shadowColor = f.col; c.shadowBlur = 14; c.lineWidth = 3 * (1 - k) + 1;
+        c.save(); c.globalAlpha = 1 - k; c.strokeStyle = f.col; c.shadowColor = f.col; c.shadowBlur = 0; c.lineWidth = 3 * (1 - k) + 1;
         c.beginPath(); c.arc(f.x, f.y, 20 + 70 * Ease.outCubic(k), 0, TAU); c.stroke(); c.restore();
       }
     }
@@ -493,7 +493,7 @@ class FightPlayer {
       c.save(); c.translate(tx.x, tx.y); c.rotate(-.06); c.scale(pop, pop); c.globalAlpha = k > .7 ? 1 - (k - .7) / .3 : 1;
       c.font = `${tx.size}px "Permanent Marker", Impact, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.lineJoin = 'round'; c.lineWidth = tx.size * .28; c.strokeStyle = INK; c.strokeText(tx.str, 0, 0);
-      c.shadowColor = tx.col; c.shadowBlur = 10; c.fillStyle = tx.col; c.fillText(tx.str, 0, 0);
+      c.shadowColor = tx.col; c.shadowBlur = 0; c.fillStyle = tx.col; c.fillText(tx.str, 0, 0);
       c.restore();
     }
   }
@@ -502,9 +502,9 @@ class FightPlayer {
     for (const o of this.orbs) {
       const k = o.life / o.max, a = k > .75 ? (1 - k) / .25 : 1, r = 11 + Math.sin(now / 160 + o.ph) * 1.5;
       c.save(); c.globalAlpha = a;
-      const g = c.createRadialGradient(o.x, o.y, 2, o.x, o.y, r * 2.4); g.addColorStop(0, 'rgba(255,220,110,.9)'); g.addColorStop(1, 'rgba(255,61,139,0)'); c.fillStyle = g; c.beginPath(); c.arc(o.x, o.y, r * 2.4, 0, TAU); c.fill();
+      const g = c.createRadialGradient(o.x, o.y, 2, o.x, o.y, r * 2.4); g.addColorStop(0, 'rgba(255,219,143,.75)'); g.addColorStop(1, 'rgba(255,185,148,0)'); c.fillStyle = g; c.beginPath(); c.arc(o.x, o.y, r * 2.4, 0, TAU); c.fill();
       c.translate(o.x, o.y); c.rotate(now / 600 + o.ph); c.beginPath(); for (let i = 0; i < 10; i++) { const an = i * TAU / 10 - Math.PI / 2, rr = i % 2 ? r * .45 : r; c.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } c.closePath();
-      c.shadowColor = '#ffcf4a'; c.shadowBlur = 12; c.fillStyle = '#ffe27a'; c.fill(); c.shadowBlur = 0; c.lineWidth = 1.4; c.strokeStyle = INK; c.stroke(); c.restore();
+      c.shadowColor = '#ffdb8f'; c.shadowBlur = 0; c.fillStyle = '#ffdb8f'; c.fill(); c.shadowBlur = 0; c.lineWidth = 1.4; c.strokeStyle = INK; c.stroke(); c.restore();
     }
   }
   /* Cercle de réflexe : se referme sur la cible. Taper quand il est dans la zone (anneau intérieur) */
@@ -512,16 +512,16 @@ class FightPlayer {
     const q = this.qte, D = q.v, parry = q.kind === 'parry';
     const x = D.x, y = this.chest(D) - 4, k = clamp(q.real / q.dur, 0, 1), inZone = k >= q.zone;
     const R1 = D.kind === 'pet' ? 18 : 26, R0 = R1 + 86, rr = lerp(R0, R1, k), rz = lerp(R0, R1, q.zone);
-    const col = parry ? '#3dc8ff' : '#ff3d8b', hot = parry ? '#bff0ff' : '#fff2b3';
+    const col = parry ? '#9cc9ff' : '#ffb994', hot = parry ? '#ffffff' : '#ffffff';
     c.save();
     // zone de réussite (anneau entre la cible et le centre)
     c.globalAlpha = inZone ? .35 : .16; c.fillStyle = col; c.beginPath(); c.arc(x, y, rz, 0, TAU); c.arc(x, y, R1, 0, TAU, true); c.fill();
-    c.globalAlpha = .95; c.strokeStyle = col; c.shadowColor = col; c.shadowBlur = 10; c.lineWidth = 2; c.beginPath(); c.arc(x, y, rz, 0, TAU); c.stroke();
+    c.globalAlpha = .95; c.strokeStyle = col; c.shadowColor = col; c.shadowBlur = 0; c.lineWidth = 2; c.beginPath(); c.arc(x, y, rz, 0, TAU); c.stroke();
     // cercle qui se referme
-    c.strokeStyle = inZone ? hot : '#ffffff'; c.shadowColor = parry ? '#3dc8ff' : '#ffcf4a'; c.shadowBlur = inZone ? 22 : 12; c.lineWidth = inZone ? 4.5 : 3; c.globalAlpha = 1;
+    c.strokeStyle = inZone ? hot : '#ffffff'; c.shadowColor = parry ? '#9cc9ff' : '#ffdb8f'; c.shadowBlur = 0; c.lineWidth = inZone ? 4.5 : 3; c.globalAlpha = 1;
     c.beginPath(); c.arc(x, y, rr, 0, TAU); c.stroke();
     // étincelle en haut du cercle
-    c.fillStyle = '#ffffff'; c.shadowBlur = 14;
+    c.fillStyle = '#ffffff'; c.shadowBlur = 0;
     const sy = y - rr; c.beginPath(); c.moveTo(x, sy - 7); c.lineTo(x + 2, sy); c.lineTo(x, sy + 7); c.lineTo(x - 2, sy); c.closePath(); c.fill();
     c.beginPath(); c.moveTo(x - 7, sy); c.lineTo(x, sy - 1.5); c.lineTo(x + 7, sy); c.lineTo(x, sy + 1.5); c.closePath(); c.fill();
     c.restore();
@@ -529,13 +529,13 @@ class FightPlayer {
       const fx = q.from.x, fy = this.top(q.from) - 24, bob = Math.sin(now / 70) * 2;
       c.save(); c.font = '34px "Permanent Marker", Impact, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.lineJoin = 'round'; c.lineWidth = 7; c.strokeStyle = INK; c.strokeText('!', fx, fy + bob);
-      c.shadowColor = '#ff3d6c'; c.shadowBlur = 16; c.fillStyle = '#ff5a7a'; c.fillText('!', fx, fy + bob); c.restore();
+      c.shadowColor = '#ff9b9b'; c.shadowBlur = 0; c.fillStyle = '#ff9b9b'; c.fillText('!', fx, fy + bob); c.restore();
     }
     if (q.hint) {
       // étiquette TAPE / PARE + main, pour les premiers réflexes
       const bx = x + 8, by = y + 8, pulse = 1 + Math.sin(now / 120) * .05;
       c.save(); c.translate(bx, by); c.scale(pulse, pulse); c.rotate(-.08);
-      c.fillStyle = 'rgba(20,12,30,.92)'; c.strokeStyle = parry ? '#7fe0ff' : '#ffffff'; c.lineWidth = 1.6;
+      c.fillStyle = 'rgba(20,12,30,.92)'; c.strokeStyle = parry ? '#9cc9ff' : '#ffffff'; c.lineWidth = 1.6;
       c.beginPath(); c.moveTo(-26, -12); c.lineTo(28, -14); c.lineTo(26, 10); c.lineTo(-28, 12); c.closePath(); c.fill(); c.stroke();
       c.font = '15px "Permanent Marker", Impact, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#ffffff'; c.fillText(parry ? 'PARE' : 'TAPE', 0, 0);
       c.translate(24, 22); c.rotate(-.5);
@@ -573,7 +573,7 @@ class FightPlayer {
     const [x, y] = this.arenaXY(ev);
     for (const o of this.orbs) if (!o.got && Math.hypot(o.x - x, o.y - y) < 32) {
       o.got = true; this.orbXp += o.val; Sfx.play('xp');
-      this.text(o.x, o.y - 10, '+' + o.val + ' XP', '#ffcf4a', 18); this.burst(o.x, o.y, '#ffcf4a', 10);
+      this.text(o.x, o.y - 10, '+' + o.val + ' XP', '#ffdb8f', 18); this.burst(o.x, o.y, '#ffdb8f', 10);
       this.o.onOrb && this.o.onOrb(this.orbXp);
       return true;
     }
@@ -590,7 +590,7 @@ class FightPlayer {
     const q = this.qte; if (!q || q.done) return;
     q.done = true; this.qte = null; this.slow = 1;
     if (q.kind === 'perfect') this.streak = ok ? this.streak + 1 : 0;
-    if (ok) { Sfx.play(q.kind === 'parry' ? 'guard' : 'perfect'); this.ring(q.v, q.kind === 'parry' ? '#3dc8ff' : '#ffcf4a'); }
+    if (ok) { Sfx.play(q.kind === 'parry' ? 'guard' : 'perfect'); this.ring(q.v, q.kind === 'parry' ? '#9cc9ff' : '#ffdb8f'); }
     else Sfx.play('miss');
     this.o.onQte && this.o.onQte(q.kind, ok, this.streak);
     q.res(ok);
@@ -637,22 +637,22 @@ class FightPlayer {
     if (e.type === 'down') { const v = this.v[e.id]; setPose(v, 'ko', 8); v.expr = 'ko'; this.tween(v, 'alpha', .55, 500); this.log(`${v.name} est hors de combat.`, e.id[0]); if (e.id[0] === 'R') this.spawnOrb(v.x, v.y - 30); }
     else if (e.type === 'skill') {
       const v = this.v[e.who]; v.glow = 1; Sfx.play('heal');
-      this.text(v.x, this.top(v) - 14, 'SECOND SOUFFLE', '#8dffb0', 15, -.02); this.text(v.x, this.top(v) + 10, '+' + e.heal, '#8dffb0', 20);
+      this.text(v.x, this.top(v) - 14, 'SECOND SOUFFLE', '#94e2bd', 15, -.02); this.text(v.x, this.top(v) + 10, '+' + e.heal, '#94e2bd', 20);
       this.log(`${v.name} reprend son souffle (+${e.heal} PV).`, e.who[0]);
       await this.wait(500);
-    } else if (e.type === 'regen') { const v = this.v[e.who]; this.text(v.x + 12, this.top(v) + 8, '+' + e.heal, '#8dffb0', 13); }
-    else if (e.type === 'stunned') { const v = this.v[e.who]; v.stun = 1.2; this.text(v.x, this.top(v) - 20, 'SONNÉ', '#ffe066', 15, -.02); this.log(`${v.name} est sonné et perd son tour.`, e.who[0]); await this.wait(420); }
+    } else if (e.type === 'regen') { const v = this.v[e.who]; this.text(v.x + 12, this.top(v) + 8, '+' + e.heal, '#94e2bd', 13); }
+    else if (e.type === 'stunned') { const v = this.v[e.who]; v.stun = 1.2; this.text(v.x, this.top(v) - 20, 'SONNÉ', '#ffdb8f', 15, -.02); this.log(`${v.name} est sonné et perd son tour.`, e.who[0]); await this.wait(420); }
     else if (e.type === 'active') await this.playActive(e);
   }
   async playActive(e) {
     const H = this.v.L, R = this.v.R, A = ACTIVES[e.id], cyan = e.id === 'bouclier' || e.id === 'soin';
     H.glow = e.id === 'soin' ? 1 : 0; setPose(H, 'windup', 18); Sfx.play(cyan ? 'guard' : 'ability'); this.slowmo(.4, 260);
-    this.ring(H, cyan ? '#3dc8ff' : '#ff3d8b');
-    this.text(H.x, this.top(H) - 30, A.name.toUpperCase(), cyan ? '#7fe0ff' : '#ff6fb0', 17, -.015);
+    this.ring(H, cyan ? '#9cc9ff' : '#ffb994');
+    this.text(H.x, this.top(H) - 30, A.name.toUpperCase(), cyan ? '#9cc9ff' : '#ffb994', 17, -.015);
     this.o.onActive && this.o.onActive(e.id);
     this.log(`${H.name} : ${A.name}.`, 'L');
-    if (e.id === 'soin') { Sfx.play('heal'); this.text(H.x, this.top(H) + 6, '+' + e.heal, '#8dffb0', 22); }
-    else if (e.id === 'cri') { this.shake(8); R.stun = 2; this.text(R.x, this.top(R) - 16, 'ÉTOURDI', '#ffe066', 15, -.02); }
+    if (e.id === 'soin') { Sfx.play('heal'); this.text(H.x, this.top(H) + 6, '+' + e.heal, '#94e2bd', 22); }
+    else if (e.id === 'cri') { this.shake(8); R.stun = 2; this.text(R.x, this.top(R) - 16, 'ÉTOURDI', '#ffdb8f', 15, -.02); }
     else if (e.id === 'devaste') H.charge = 1;
     else if (e.id === 'brise') { this.burst(R.x, this.chest(R), '#cfd6de', 12); this.text(R.x, this.top(R) - 10, 'ARMURE BRISÉE', '#cfd6de', 14, -.02); }
     else if (e.id === 'balayage') {
@@ -673,7 +673,7 @@ class FightPlayer {
       await this.move(A, tx, ty, Math.hypot(A.x - tx, A.y - ty) / .55, Ease.linear);
       A.running = false;
     }
-    if (s.counter) { this.text(A.x, this.top(A) - 10, 'RIPOSTE', '#ffcf4a', 14, -.02); this.log(`${A.name} riposte !`, s.a[0]); }
+    if (s.counter) { this.text(A.x, this.top(A) - 10, 'RIPOSTE', '#ffdb8f', 14, -.02); this.log(`${A.name} riposte !`, s.a[0]); }
     setPose(A, 'windup', 24);
     const input = {};
     if (!this.skipped && s.heroStrike) input.perfect = await this.startQte('perfect', D, A);
@@ -688,7 +688,7 @@ class FightPlayer {
     const hx = D.x - D.face * 4, hy = this.chest(D);
     if (e.res === 'dodge') {
       setPose(D, 'dodge', 26); Sfx.play('dodge');
-      this.text(D.x, this.top(D) - 6, 'ESQUIVE', '#bfe7ff', 16, -.03);
+      this.text(D.x, this.top(D) - 6, 'ESQUIVE', '#9cc9ff', 16, -.03);
       this.log(`${D.name} esquive.`, sideD);
       await this.tween(D, 'x', D.x - D.face * 30, 150);
       setPose(D, 'idle', 10); await this.tween(D, 'x', D.x + D.face * 30, 170);
@@ -699,21 +699,21 @@ class FightPlayer {
       await this.wait(240);
     } else {
       const big = e.crit || e.heavy || e.perfect || e.devast;
-      if (e.parried) { setPose(D, 'block', 30); this.burst(hx, hy, '#7fe0ff', 14); this.ring(D, '#3dc8ff'); this.text(D.x, this.top(D) - 28, 'PARÉ !', '#7fe0ff', 22, -.02); }
+      if (e.parried) { setPose(D, 'block', 30); this.burst(hx, hy, '#9cc9ff', 14); this.ring(D, '#9cc9ff'); this.text(D.x, this.top(D) - 28, 'PARÉ !', '#9cc9ff', 22, -.02); }
       else { D.flash = 1; setPose(D, 'hit', 32); D.expr = 'hurt'; }
-      if (e.shielded) { this.burst(hx, hy, '#7fe0ff', 10); this.text(D.x, this.top(D) - 44, 'PROTÉGÉ', '#7fe0ff', 13, -.02); }
-      this.impact(hx, hy, big); this.burst(hx, hy, e.crit || e.perfect ? '#ffcf4a' : '#ff6fb0', big ? 16 : 9);
+      if (e.shielded) { this.burst(hx, hy, '#9cc9ff', 10); this.text(D.x, this.top(D) - 44, 'PROTÉGÉ', '#9cc9ff', 13, -.02); }
+      this.impact(hx, hy, big); this.burst(hx, hy, e.crit || e.perfect ? '#ffdb8f' : '#ffb994', big ? 16 : 9);
       this.shake(e.devast ? 10 : big ? 7 : e.parried ? 2 : 3.2);
       Sfx.play(big ? 'crit' : 'hit');
-      this.text(D.x + (Math.random() - .5) * 18, this.top(D) + 4, String(e.dmg), big ? '#ffcf4a' : '#ffffff', big ? 32 : 24);
-      if (e.perfect) { this.text(D.x, this.top(D) - 28, 'PARFAIT !', '#ffcf4a', 26, -.02); this.slowmo(.35, 200); if (Math.random() < .5) this.spawnOrb(D.x, D.y - 40); }
-      else if (e.devast) { this.text(D.x, this.top(D) - 28, 'DÉVASTATEUR', '#ff6fb0', 19, -.02); this.slowmo(.3, 260); }
-      else if (e.crit) { this.text(D.x, this.top(D) - 26, 'CRITIQUE', '#ffcf4a', 15, -.02); this.slowmo(.35, 180); }
-      else if (e.heavy) this.text(D.x, this.top(D) - 26, 'FRACAS', '#ff9d5c', 15, -.02);
+      this.text(D.x + (Math.random() - .5) * 18, this.top(D) + 4, String(e.dmg), big ? '#ffdb8f' : '#ffffff', big ? 32 : 24);
+      if (e.perfect) { this.text(D.x, this.top(D) - 28, 'PARFAIT !', '#ffdb8f', 26, -.02); this.slowmo(.35, 200); if (Math.random() < .5) this.spawnOrb(D.x, D.y - 40); }
+      else if (e.devast) { this.text(D.x, this.top(D) - 28, 'DÉVASTATEUR', '#ffb994', 19, -.02); this.slowmo(.3, 260); }
+      else if (e.crit) { this.text(D.x, this.top(D) - 26, 'CRITIQUE', '#ffdb8f', 15, -.02); this.slowmo(.35, 180); }
+      else if (e.heavy) this.text(D.x, this.top(D) - 26, 'FRACAS', '#ffb994', 15, -.02);
       if (e.pierce) this.text(D.x, this.top(D) - 46, 'SANS ARMURE', '#cfd6de', 12, -.02);
-      if (e.heal) this.text(A.x, this.top(A) + 4, '+' + e.heal, '#8dffb0', 16);
-      if (e.thorns) { A.flash = .7; this.text(A.x, this.top(A), '-' + e.thorns, '#ff9d9d', 15); }
-      if (e.stun) { D.stun = 1.6; this.text(D.x, this.top(D) - 36, 'ÉTOURDI', '#ffe066', 13, -.02); }
+      if (e.heal) this.text(A.x, this.top(A) + 4, '+' + e.heal, '#94e2bd', 16);
+      if (e.thorns) { A.flash = .7; this.text(A.x, this.top(A), '-' + e.thorns, '#ff9b9b', 15); }
+      if (e.stun) { D.stun = 1.6; this.text(D.x, this.top(D) - 36, 'ÉTOURDI', '#ffdb8f', 13, -.02); }
       this.setHp(e.hp);
       this.log(`${A.name} frappe ${D.name} : ${e.dmg}${e.crit ? ' (critique)' : ''}${e.parried ? ' (paré)' : ''}${e.perfect ? ' (parfait)' : ''}.`, sideA);
       this.tween(D, 'x', D.x + A.face * 9, 90);
@@ -723,7 +723,7 @@ class FightPlayer {
   async afterStrike(s, cont) {
     const A = this.v[s.a], D = this.v[s.d];
     if (this.F.over) return;
-    if (cont === 'combo') { this.text(A.x, this.top(A) - 10, 'ENCHAÎNEMENT', '#ffcf4a', 12, -.02); if (!D.pose.rot) { setPose(D, 'idle', 8); D.expr = 'neutral'; } return; }
+    if (cont === 'combo') { this.text(A.x, this.top(A) - 10, 'ENCHAÎNEMENT', '#ffdb8f', 12, -.02); if (!D.pose.rot) { setPose(D, 'idle', 8); D.expr = 'neutral'; } return; }
     if (cont === 'counter') { setPose(A, 'idle', 12); D.expr = 'neutral'; return; }
     if (!D.pose.rot) { setPose(D, 'idle', 8); D.expr = 'neutral'; }
     const back = v => {
@@ -750,7 +750,7 @@ class FightPlayer {
       if (id[0] === W) { v.running = false; setPose(v, 'victory', 6); v.expr = 'grin'; }
     }
     const wv = this.v[W];
-    this.text(wv.x, this.top(wv) - 20, W === 'L' ? 'VICTOIRE' : 'DÉFAITE', W === 'L' ? '#ffcf4a' : '#ff5a6e', 30, -.01);
+    this.text(wv.x, this.top(wv) - 20, W === 'L' ? 'VICTOIRE' : 'DÉFAITE', W === 'L' ? '#ffdb8f' : '#ff9b9b', 30, -.01);
     await this.wait(1100);
   }
   togglePause(on) { this.paused = on == null ? !this.paused : on; }
