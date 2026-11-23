@@ -5,7 +5,7 @@ Règle : chaque version livrée part en même temps sur la page de test Claude (
 ## Non publié (en cours)
 - (rien)
 
-## 0.9.0 — sur main et page de test (2026-11-23), release à valider
+## 0.9.0 — release publique (2026-11-23)
 Tutoriel, sorts lisibles, familiers peints, tour plus longue.
 - Tutoriel progressif : une carte par notion, au moment où on la découvre (bienvenue, coup parfait, parade, technique prête, continuer ou encaisser, première chute, points, familiers au niveau 5, point de technique, butin, portail). En combat, le jeu se met en pause sur le premier cercle et la fenêtre du premier tap est allongée. « Passer le tutoriel » à tout moment
 - Bouclier : dôme protecteur autour du héros tant qu'il reste des charges (maillage, reflet, une gemme par charge), il s'illumine quand il encaisse et éclate quand il est épuisé
