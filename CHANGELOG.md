@@ -5,6 +5,16 @@ Règle : chaque version livrée part en même temps sur la page de test Claude (
 ## Non publié (en cours)
 - (rien)
 
+## 0.8.0 — release publique (2026-11-23)
+Personnages peints pour tout le monde.
+- Création : choix entre trois combattants peints animés, Chevalier, Samouraï et MechBot (onglet Héros : changer de personnage, ou revenir au héros « Dessiné »)
+- Ennemis peints : gobelin, golem, champignon, pousse-gelée, chevalier de fer, mage d'os, ombre, samouraï, MechBot, chevalier ; le type dépend de l'origine de l'adversaire
+- Boss : roi gélatine, roi épineux, golem, mage d'os… selon le palier
+- Déclinaisons : chaque adversaire a sa couleur (teinte, saturation, luminosité), sa taille et sa silhouette, tirées de son nom et de son étage (toujours les mêmes pour un étage donné)
+- Portée, hauteur des chiffres et pastilles adaptées à la taille de chaque créature
+- Atlases WebP par personnage (3,2 Mo au total), chargés à la demande ; générés par `tools/sprites.py` depuis les packs SpriteCanvas (CC0, domaine public)
+- L'écran de création ne propose plus la peau, la coiffure et les couleurs (elles ne servent qu'au héros « Dessiné »)
+
 ## 0.7.3 — release publique (2026-11-23)
 - L'épéiste peint est aussi ton héros hors combat : avatar en haut de l'écran, fiche Héros, portrait du bandeau de combat
 - Onglet Héros : choix « Apparence » (Épéiste peint / Dessiné), le même que dans le menu Pause

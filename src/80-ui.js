@@ -126,18 +126,19 @@ function toast(msg) {
 }
 
 /* Portrait animé (tête) réutilisable */
-/* Héros du joueur : épéiste peint (sprite) sauf si le joueur a choisi « Dessiné » */
+/* Héros du joueur : personnage peint choisi à la création (Chevalier, Samouraï, MechBot), sauf « Dessiné » */
+const HERO_CHARS = ['swordsman', 'samurai', 'mech'];
 const heroSpriteOn = () => !(typeof S !== 'undefined' && S && S.heroSprite === false);
-function heroView(v, hero) { if (hero && heroSpriteOn()) { v.sprite = SPRITE_SWORDSMAN; spriteImg(SPRITE_SWORDSMAN); } return v; }
+function heroView(v, hero, char) { if (hero && (char || heroSpriteOn())) { v.sprite = SPRITES[char || heroChar()]; spriteImg(v.sprite); } return v; }
 function portrait(ent, equip, face, cls, hero) {
   const cv = h('canvas', { class: cls || '' });
   const v = heroView(makeView(ent, equip || {}, face === -1 ? 'R' : 'L', 0, 0), hero);
-  attachPreview(cv, () => v, v.sprite ? { zoom: 1.4, cy: -136, dx: -27 } : { zoom: 1.2, cy: -126 });
+  attachPreview(cv, () => v, v.sprite ? spritePortrait(v) : { zoom: 1.2, cy: -126 });
   return cv;
 }
-function fullPreview(ent, equip, face, cls, zoom, hero) {
+function fullPreview(ent, equip, face, cls, zoom, hero, char) {
   const cv = h('canvas', { class: cls || '' });
-  const v = heroView(makeView(ent, equip || {}, face === -1 ? 'R' : 'L', 0, 0), hero);
+  const v = heroView(makeView(ent, equip || {}, face === -1 ? 'R' : 'L', 0, 0), hero, char);
   attachPreview(cv, () => v, { zoom: (zoom || 1) * .49, dy: 10 });
   cv._view = v;
   return cv;

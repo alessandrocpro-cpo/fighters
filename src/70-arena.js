@@ -355,7 +355,7 @@ class FightPlayer {
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
   }
-  setHeroSprite(on) { const v = this.v.L; v.sprite = on ? SPRITE_SWORDSMAN : null; if (on) spriteImg(SPRITE_SWORDSMAN); }
+  setHeroSprite(on) { const v = this.v.L; v.sprite = on ? SPRITES[heroChar()] : null; if (on) spriteImg(v.sprite); }
   wait(ms) { if (this.skipped) return Promise.resolve(); return new Promise(res => this.waits.push({ at: this.clock + ms, res })); }
   tween(obj, key, to, ms, ease) {
     if (this.skipped) { obj[key] = to; return Promise.resolve(); }
@@ -370,7 +370,7 @@ class FightPlayer {
     for (let i = 0; i < n; i++) { const a = Math.random() * TAU, sp = .08 + Math.random() * .25; this.fx.push({ kind: kind || 'spark', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (kind === 'dust' ? .02 : .05), life: 0, max: 260 + Math.random() * 220, col, s: 2 + Math.random() * 3, rot: Math.random() * TAU }); }
   }
   impact(x, y, big) { if (!this.skipped) this.fx.push({ kind: 'impact', x, y, life: 0, max: big ? 240 : 170, s: big ? 1.5 : 1, rot: Math.random() * TAU }); }
-  slashFx(v) { if (!this.skipped) this.fx.push({ kind: 'slash', x: v.x + v.face * 26, y: v.y - (v.kind === 'pet' ? 26 : 76 * CH), face: v.face, life: 0, max: 170, small: v.kind === 'pet' }); }
+  slashFx(v) { if (!this.skipped) this.fx.push({ kind: 'slash', x: v.x + v.face * 26, y: v.sprite ? this.chest(v) - 10 : v.y - (v.kind === 'pet' ? 26 : 76 * CH), face: v.face, life: 0, max: 170, small: v.kind === 'pet' }); }
   ring(v, col) { if (!this.skipped) this.fx.push({ kind: 'ring', x: v.x, y: this.chest(v), col, life: 0, max: 420 }); }
   /* « Moments forts » : arrêt sur image, flash écran, coup de zoom, gros titre au centre */
   hitstop(ms) { if (!this.skipped) this.freeze = Math.max(this.freeze, ms); }
@@ -380,8 +380,8 @@ class FightPlayer {
   pillar(v, col) { if (!this.skipped) this.fx.push({ kind: 'pillar', x: v.x, y: v.y, col, life: 0, max: 700 }); }
   clang(v, col) { if (!this.skipped) this.fx.push({ kind: 'clang', x: v.x + v.face * 20, y: this.chest(v) - 4, face: v.face, col, life: 0, max: 380 }); }
   call(str, sub, col, ms) { if (this.skipped) return; this.callout = { str, sub, col, life: 0, max: ms || 1200 }; this.o.onCallout && this.o.onCallout(); }
-  top(v) { return v.y - (v.kind === 'pet' ? 46 : HERO_H * CH * v.scale); }
-  chest(v) { return v.y - (v.kind === 'pet' ? 24 : CHEST_Y * CH * v.scale); }
+  top(v) { return v.y - (v.sprite ? v.sprite.H * v.scale * (v.sy || 1) : v.kind === 'pet' ? 46 : HERO_H * CH * v.scale); }
+  chest(v) { return v.y - (v.sprite ? v.sprite.H * v.scale * (v.sy || 1) * .55 : v.kind === 'pet' ? 24 : CHEST_Y * CH * v.scale); }
 
   loop(now) {
     if (!this.alive) return;
@@ -781,7 +781,7 @@ class FightPlayer {
     setPose(H, 'idle', 10);
     for (const id in this.v) if (id[0] === 'R' && !this.v[id].pose.rot) setPose(this.v[id], 'idle', 10);
   }
-  reach(A, D) { return (A.sprite ? 74 : A.kind === 'pet' ? 34 : 52 + WEAPONS[A.gear.weapon].reach * .6) + (D.sprite ? 10 : 0) + (D.kind === 'pet' ? -6 : 0) + (D.boss ? 10 : 0); }
+  reach(A, D) { return (A.sprite ? A.sprite.reach * A.scale : A.kind === 'pet' ? 34 : 52 + WEAPONS[A.gear.weapon].reach * .6) + (D.sprite ? D.sprite.body * D.scale : 0) + (D.kind === 'pet' ? -6 : 0) + (D.boss ? 10 : 0); }
   async playWindup(s) {
     const A = this.v[s.a], D = this.v[s.d];
     const reach = this.reach(A, D), tx = D.x - A.face * reach, ty = D.y + (D.kind === 'pet' ? -2 : 1);

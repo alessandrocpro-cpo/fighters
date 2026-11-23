@@ -262,6 +262,12 @@ h1, h2, h3 { margin: 0; font-family: var(--f-display); font-weight: 400; letter-
 .sw.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
 .pill { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; font-family: var(--f-ui); font-weight: 600; font-size: 14px; color: var(--text); background: var(--surface-2); border-radius: 999px; }
 .pill.on { background: var(--sky); color: var(--on); }
+/* Choix du personnage à la création */
+.chars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.charc { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px 8px; color: var(--text); background: var(--surface); border-radius: 14px; box-shadow: inset 0 0 0 2px transparent; }
+.charc.on { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--sky); }
+.charc b { font-family: var(--f-ui); font-weight: 700; font-size: 15px; }
+.charprev { width: 100%; height: 118px; display: block; }
 .origins { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .origin { text-align: left; padding: 10px 12px; color: var(--text); background: var(--surface); border-radius: 14px; }
 .origin.on { box-shadow: inset 0 0 0 2px var(--sky); background: var(--surface-2); }

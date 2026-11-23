@@ -472,10 +472,6 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
     const ov = overlay(close => [
       h('h2', null, 'Pause'),
       h('div', { class: 'label', style: { textAlign: 'center' } }, 'Vitesse'), spd,
-      // prototype : héros épéiste peint (sprite) ou héros dessiné en code (équipement visible)
-      h('div', { class: 'label', style: { textAlign: 'center' } }, 'Apparence du héros (test)'),
-      h('div', { class: 'row', style: { justifyContent: 'center' } }, [['Épéiste peint', true], ['Dessiné', false]].map(([lb, on]) =>
-        h('button', { class: 'pill' + ((S.heroSprite !== false) === on ? ' on' : ''), onclick: () => { S.heroSprite = on; fp.setHeroSprite(on); save(); ov.close(); openPause(); } }, lb))),
       h('button', { class: 'btn btn-gold', onclick: () => { close(); fp.togglePause(false); } }, 'Reprendre'),
       h('button', { class: 'btn btn-stone', onclick: () => { close(); fp.skip(); } }, 'Passer le combat'),
       h('p', { style: { margin: 0, fontSize: '13px', textAlign: 'center', color: 'var(--muted)' } }, 'Passer joue la fin du combat en automatique : sans coup parfait ni parade, techniques lancées dès que possible.'),
@@ -561,10 +557,13 @@ function tabHero() {
         h('div', { class: 'power num' }, fmt(teamPower(st, myPets())), st.power !== st0.power ? h('small', { class: 'delta-up' }, ` +${fmt(st.power - st0.power)}`) : null),
         h('div', { style: { fontSize: '12px', color: 'var(--muted-ink)' } }, `${S.stats.runs} runs · record étage ${S.best}`))),
     // apparence : épéiste peint (prototype) ou héros dessiné (équipement et coiffure visibles)
-    h('div', { class: 'row', style: { justifyContent: 'center', gap: '8px', marginTop: '10px' } },
-      h('span', { class: 'label' }, 'Apparence'),
-      [['Épéiste peint', true], ['Dessiné', false]].map(([lb, on]) =>
-        h('button', { class: 'pill' + (heroSpriteOn() === on ? ' on' : ''), onclick: () => { S.heroSprite = on; save(); render(); } }, lb)))));
+    h('div', { class: 'col', style: { gap: '6px', marginTop: '10px', alignItems: 'center' } },
+      h('span', { class: 'label' }, 'Personnage'),
+      h('div', { class: 'opts', style: { justifyContent: 'center' } },
+        [...HERO_CHARS.map(id => [SPRITES[id].name, id]), ['Dessiné', null]].map(([lb, id]) => {
+          const on = id ? heroSpriteOn() && heroChar() === id : !heroSpriteOn();
+          return h('button', { class: 'pill' + (on ? ' on' : ''), onclick: () => { if (id) { S.hero.char = id; S.heroSprite = true; } else S.heroSprite = false; save(); render(); } }, lb);
+        })))));
   if (S.hero.choices) sc.append(choicePanel());
   const rows = h('div', { class: 'alloc' });
   for (const k of STAT_KEYS) {
@@ -801,9 +800,9 @@ function openItem(it, equippedSlot, locked) {
 /* ---------- Création ---------- */
 function renderCreate(app) {
   const r = rnd();
-  const st = { name: randomName(), origin: 'brute', look: { skin: LOOK.skin[1], hair: 'meches', hairColor: LOOK.hairColors[0], eyes: LOOK.eyes[0], outfit: LOOK.outfit[0], build: 'normal' } };
+  const st = { name: randomName(), origin: 'brute', char: 'swordsman', look: { skin: LOOK.skin[1], hair: 'meches', hairColor: LOOK.hairColors[0], eyes: LOOK.eyes[0], outfit: LOOK.outfit[0], build: 'normal' } };
   let view = null;
-  const rebuildView = () => { view = makeView({ look: st.look }, { weapon: starterWeapon(st.origin) }, 'L', 0, 0); };
+  const rebuildView = () => { view = heroView(makeView({ look: st.look }, { weapon: starterWeapon(st.origin) }, 'L', 0, 0), true, st.char); };
   rebuildView();
   const prev = h('canvas', { class: 'create-prev' });
   attachPreview(prev, () => view, { zoom: .64, dy: 12 });
@@ -816,20 +815,20 @@ function renderCreate(app) {
   const origins = h('div', { class: 'origins' });
   const drawO = () => { origins.innerHTML = ''; for (const k in ORIGINS) { const O = ORIGINS[k]; const bonus = STAT_KEYS.filter(s => O.stats[s]).map(s => `+${O.stats[s]} ${STAT_SHORT[s]}`).join('  '); origins.append(h('button', { class: 'origin' + (st.origin === k ? ' on' : ''), onclick: () => { st.origin = k; rebuildView(); drawO(); } }, h('b', null, O.name), h('span', null, O.desc), h('i', null, `${bonus} · ${WEAPONS[O.weapon].name}`))); } };
   drawO();
+  /* Choix du personnage : trois combattants peints, animés */
+  const chars = h('div', { class: 'chars' });
+  const drawC = () => { chars.innerHTML = ''; for (const id of HERO_CHARS) chars.append(h('button', { class: 'charc' + (st.char === id ? ' on' : ''), onclick: () => { st.char = id; rebuildView(); drawC(); Sfx.play('tap'); } },
+    fullPreview({ look: st.look }, {}, 1, 'charprev', 1.15, true, id), h('b', null, SPRITES[id].name))); };
+  drawC();
   sc.append(
     h('div', { class: 'logo' }, h('h1', null, 'CLIMBRAWL'), h('p', null, 'La Tour aux cent étages')),
     prev,
     section('Nom', h('div', { class: 'row' }, nameIn, h('button', { class: 'btn btn-sm btn-stone', 'aria-label': 'Nom au hasard', onclick: () => { nameIn.value = st.name = randomName(); } }, icon('dice', 22)))),
+    section('Personnage', chars),
     section('Origine', origins),
-    section('Peau', swatches('skin', LOOK.skin)),
-    section('Coiffure', pills('hair', LOOK.hairStyles, LOOK.hairStyleNames)),
-    section('Cheveux', swatches('hairColor', LOOK.hairColors)),
-    section('Yeux', swatches('eyes', LOOK.eyes)),
-    section('Tenue', swatches('outfit', LOOK.outfit)),
-    section('Carrure', pills('build', LOOK.builds, LOOK.buildNames)),
     h('button', { class: 'btn btn-gold btn-big', style: { marginTop: '6px' }, onclick: () => {
       Sfx.init(); Sfx.play('level');
-      newGame((st.name || '').trim() || randomName(), { ...st.look }, st.origin); tab = 'tour'; render();
+      newGame((st.name || '').trim() || randomName(), { ...st.look }, st.origin); S.hero.char = st.char; S.heroSprite = true; save(); tab = 'tour'; render();
     } }, 'Entrer dans la Tour'));
   app.append(sc);
 }

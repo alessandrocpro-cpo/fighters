@@ -82,7 +82,14 @@ function makeView(ent, equip, side, x, y) {
     gear: { weapon: w ? w.base : 'poings', wRar: w ? w.rarity : 0, armor: a ? a.base : null, aRar: a ? a.rarity : 0 },
     pose: { ...POSES.idle }, target: POSES.idle, rate: 10, running: false, runT: 0, flash: 0, alpha: 1,
     phase: Math.random() * 10, expr: 'neutral', stun: 0, glow: 0,
+    ...(side === 'R' && ent.title != null ? enemySprite(ent) : {}),
   };
+}
+/* Adversaire de la tour : personnage peint décliné (couleur, taille, silhouette) */
+function enemySprite(ent) {
+  const L = enemyLook(ent), sp = SPRITES[L.id]; if (!sp) return {};
+  spriteImg(sp);
+  return { sprite: sp, tint: L.tint, scale: (ent.boss ? 1.12 : 1) * L.size, sx: L.sx, sy: L.sy };
 }
 function setPose(v, name, rate) {
   v.target = (v.kind === 'pet' ? PET_POSES : POSES)[name]; v.rate = rate || 12;
@@ -477,24 +484,90 @@ function star(c, x, y, r, col) {
 
 /* ---------- Éclairage d'ensemble : calque + dégradé + contre-jour ---------- */
 const _litA = document.createElement('canvas'), _litB = document.createElement('canvas');
-/* ---------- Héros en sprite peint (prototype : épéiste SpriteCanvas, CC0) ---------- */
-const _sprImg = {};
-function spriteImg(S) {
-  let im = _sprImg[S.src.length]; if (!im) { im = _sprImg[S.src.length] = new Image(); im.src = S.src; }
-  return im.complete && im.naturalWidth ? im : null;
+/* ---------- Personnages peints (atlases SpriteCanvas, CC0 / domaine public) ----------
+   Un atlas WebP par personnage (sprites/<id>.webp), chargé à la demande. Les ennemis sont déclinés
+   en couleur (teinte, saturation, luminosité), en taille et en silhouette (étirement). */
+const _sprImg = {}, _sprTint = new Map();
+function spriteImg(S, tint) {
+  let im = _sprImg[S.src]; if (!im) { im = _sprImg[S.src] = new Image(); im.decoding = 'async'; im.src = S.src; }
+  if (!(im.complete && im.naturalWidth)) return null;
+  if (!tint || (!tint.h && tint.s === 1 && tint.b === 1)) return im;
+  const key = S.src + '|' + tint.h + '|' + tint.s + '|' + tint.b;
+  let cv = _sprTint.get(key);
+  if (!cv) {
+    cv = tintImage(im, tint) || im; _sprTint.set(key, cv);
+    if (_sprTint.size > 5) _sprTint.delete(_sprTint.keys().next().value); // les atlases teints pèsent lourd en mémoire
+  }
+  return cv;
 }
+/* Recolore un atlas : filtre canvas si dispo, sinon calcul pixel par pixel (même formule que CSS) */
+function tintImage(im, t) {
+  const cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+  const c = cv.getContext('2d');
+  if (typeof c.filter === 'string') {
+    c.filter = `hue-rotate(${t.h}deg) saturate(${t.s}) brightness(${t.b})`; c.drawImage(im, 0, 0); c.filter = 'none';
+    return cv;
+  }
+  c.drawImage(im, 0, 0);
+  try {
+    const d = c.getImageData(0, 0, cv.width, cv.height), p = d.data;
+    const a = t.h * Math.PI / 180, co = Math.cos(a), si = Math.sin(a), s = t.s, b = t.b;
+    const H = [.213 + co * .787 - si * .213, .715 - co * .715 - si * .715, .072 - co * .072 + si * .928,
+      .213 - co * .213 + si * .143, .715 + co * .285 + si * .14, .072 - co * .072 - si * .283,
+      .213 - co * .213 - si * .787, .715 - co * .715 + si * .715, .072 + co * .928 + si * .072];
+    const Sm = [.213 + .787 * s, .715 - .715 * s, .072 - .072 * s, .213 - .213 * s, .715 + .285 * s, .072 - .072 * s, .213 - .213 * s, .715 - .715 * s, .072 + .928 * s];
+    const M = []; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) M.push(b * (Sm[i * 3] * H[j] + Sm[i * 3 + 1] * H[3 + j] + Sm[i * 3 + 2] * H[6 + j]));
+    for (let i = 0; i < p.length; i += 4) {
+      if (!p[i + 3]) continue;
+      const r = p[i], g = p[i + 1], bl = p[i + 2];
+      p[i] = M[0] * r + M[1] * g + M[2] * bl; p[i + 1] = M[3] * r + M[4] * g + M[5] * bl; p[i + 2] = M[6] * r + M[7] * g + M[8] * bl;
+    }
+    c.putImageData(d, 0, 0);
+    return cv;
+  } catch (e) { return null; } // image d'une autre origine : on garde les couleurs d'origine
+}
+const spriteK = v => v.scale * v.sprite.H / v.sprite.stand;
 function drawSpriteFighter(c, v) {
-  const S = v.sprite, p = v.pose, k = v.scale * CH * HERO_H / S.stand, ko = v.anim === 'ko';
+  const S = v.sprite, p = v.pose, k = spriteK(v), ko = v.anim === 'ko', fx = v.sx || 1, fy = v.sy || 1;
   c.save(); c.translate(v.x, v.y); c.globalAlpha *= .42 * v.alpha; // ombre au sol
-  const sh = 1 - Math.min(.5, -p.bodyY / 80); c.beginPath(); c.ellipse(ko ? -v.face * 16 : 0, 0, (ko ? 52 : 30) * sh * v.scale, 7 * sh, 0, 0, TAU);
+  const sh = 1 - Math.min(.5, -p.bodyY / 80), w = (S.body + 20) * v.scale * fx;
+  c.beginPath(); c.ellipse(ko ? -v.face * w * .5 : 0, 0, (ko ? w * 1.7 : w) * sh, 7 * sh, 0, 0, TAU);
   c.fillStyle = '#0a0612'; c.fill(); c.restore();
-  const img = spriteImg(S); if (!img) return;
+  const img = spriteImg(S, v.tint); if (!img) return;
   const cl = S.clips[v.anim] || S.clips.idle;
   let i = Math.floor((v.animT || 0) / cl.ms); i = cl.loop ? i % cl.f.length : Math.min(i, cl.f.length - 1);
   const n = cl.f[i], sx = (n % S.cols) * S.fw, sy = Math.floor(n / S.cols) * S.fh;
-  c.save(); c.translate(v.x, v.y + (v.anim === 'dodge' ? p.bodyY * .6 : 0)); c.scale(k * v.face, k); c.globalAlpha *= v.alpha;
+  c.save(); c.translate(v.x, v.y + (v.anim === 'dodge' ? p.bodyY * .6 : 0)); c.scale(k * v.face * fx, k * fy); c.globalAlpha *= v.alpha;
+  if (S.pixel) c.imageSmoothingEnabled = false;
   c.drawImage(img, sx, sy, S.fw, S.fh, -S.px, -S.py, S.fw, S.fh);
   c.restore();
+}
+/* Cadrage portrait (tête) d'un personnage peint */
+function spritePortrait(v) {
+  const k = spriteK(v), Hs = v.sprite.H * v.scale * (v.sy || 1);
+  return { zoom: 1.4, cy: -(Hs - Math.min(40, Hs * .5)), dx: -v.face * v.sprite.headX * k * (v.sx || 1) };
+}
+
+/* ---------- Ennemis peints : type selon l'origine (boss : grandes créatures), puis déclinaison ---------- */
+const ENEMY_POOL = {
+  brute: ['goblin', 'mushroom', 'knight', 'golem', 'swordsman'],
+  lame: ['rogue', 'samurai', 'goblin', 'slime', 'swordsman'],
+  colosse: ['golem', 'knight', 'mushroom', 'slime'],
+  tempete: ['necro', 'slime', 'rogue', 'samurai', 'mech'],
+};
+const BOSS_POOL = ['slimeboss', 'golem', 'slimeking', 'necro', 'knight', 'mech', 'samurai', 'slimeboss', 'slimeking', 'golem'];
+const ENEMY_HUES = [0, 0, 0, 25, 60, 110, 165, 200, 250, 300];
+const heroChar = () => (typeof S !== 'undefined' && S && S.hero && SPRITES[S.hero.char]) ? S.hero.char : 'swordsman';
+function enemyLook(ent) {
+  const rr = makeRng(hashStr('look:' + ent.name + ':' + ent.floor + ':' + ent.origin));
+  let id;
+  if (ent.boss) id = BOSS_POOL[Math.floor((ent.floor - 1) / 10) % BOSS_POOL.length];
+  else { const pool = (ENEMY_POOL[ent.origin] || Object.keys(SPRITES)).filter(x => x !== heroChar()); id = rr.pick(pool); }
+  const h = rr.pick(ENEMY_HUES), q = x => Math.round(x * 20) / 20;
+  return {
+    id, tint: { h, s: q(h ? rr.range(.8, 1.3) : rr.range(.9, 1.15)), b: q(rr.range(.85, 1.1)) },
+    size: ent.boss ? rr.range(1.02, 1.12) : rr.range(.86, 1.16), sx: rr.range(.9, 1.12), sy: rr.range(.93, 1.08),
+  };
 }
 function drawFighter(c, v, t) {
   if (v.sprite) return drawSpriteFighter(c, v);
