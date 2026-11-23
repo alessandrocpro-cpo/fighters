@@ -2,8 +2,10 @@
 
 Règle : chaque version livrée part en même temps sur la page de test Claude (artefact) et sur GitHub : push sur `main` et `release` (GitHub Pages), plus un tag git `vX.Y.Z`. Chaque version incrémente `GAME_VERSION` (src/00-core.js) et ajoute une entrée ici.
 
-## Non publié (en cours)
-Techniques automatiques expliquées (poussé sur `main` sous le nom « 0.9.1 », jamais publié : la version affichée reste 0.9.0).
+## 0.9.1 — release publique (2026-11-23)
+Tablette, grand écran et téléphone en paysage ; techniques automatiques expliquées.
+
+Techniques automatiques expliquées.
 - Tutoriel : la carte « Technique prête » prévient qu'à 100 de rage les techniques partent toutes seules ; nouvelle carte « Lancement automatique » la première fois que ça arrive
 - Options : « Techniques auto à rage pleine : oui / non »
 
