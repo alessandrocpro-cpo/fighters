@@ -333,6 +333,14 @@ function drawShip(c, x, y, s, col, win, face) {
 /* ---------- Chiffres de jeu ----------
    Police ronde épaisse, dégradé vertical (clair en haut, foncé en bas), gros contour brun et relief décalé.
    La palette dit le poids du coup : blanc < or < orange < rouge ; critique rouge flamboyant ; vert = soin / XP. */
+/* Icônes des techniques en image (pour le canvas), mises en cache */
+const _tIco = {};
+function techIcon(id) {
+  if (_tIco[id]) return _tIco[id];
+  const img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#1a1024" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">${ICONS['t_' + id] || ''}</svg>`);
+  return (_tIco[id] = img);
+}
 const NUM_FONT = '"Lilita One", "Arial Black", Impact, sans-serif';
 const NUM_EDGE = '#2b160c';
 const NUM_PAL = {
@@ -347,7 +355,15 @@ const NUM_PAL = {
   hurt:   ['#ffe6e6', '#ff7d86', '#cf2440'],
   steel:  ['#ffffff', '#e2e8f0', '#97a6b8'],
   level:  ['#fff8c4', '#ffd23c', '#e8840c'],
+  xp:     ['#f6eeff', '#c49bff', '#7444d0'], // XP : lavande, jamais confondue avec le vert des soins
 };
+/* Dégâts infligés : dégradé continu du jaune (égratignure) au rouge (gros coup), rouge profond en critique */
+const DMG_STOPS = [['#fffbd0', '#ffe23a', '#e8a80a'], ['#ffeaa0', '#ffb21f', '#e2700a'], ['#ffd9a8', '#ff7a1c', '#d0400c'], ['#ffc9b0', '#ff3d22', '#b3121a']];
+const DMG_CRIT = ['#ffe6a6', '#ff2414', '#8a0612'];
+function dmgPal(k) {
+  k = clamp(k, 0, 1) * (DMG_STOPS.length - 1); const i = Math.min(DMG_STOPS.length - 2, Math.floor(k)), f = k - i;
+  return DMG_STOPS[i].map((c, j) => mix(c, DMG_STOPS[i + 1][j], f));
+}
 const _palc = {};
 const palOf = col => _palc[col] || (_palc[col] = [mix(col, '#ffffff', .7), col, mix(col, '#2b160c', .22)]);
 function fancyText(c, str, x, y, size, pal, maxW) {
@@ -407,10 +423,12 @@ class FightPlayer {
   /* Couleur et taille selon la part de PV retirée ; rouge rosé quand c'est le héros qui encaisse */
   dmgNum(D, id, dmg, o) {
     o = o || {};
-    const U = this.F.U[id], r = dmg / Math.max(1, U && U.st ? U.st.maxHp : 100), t = r < .08 ? 0 : r < .16 ? 1 : r < .3 ? 2 : 3;
-    let pal = id[0] === 'L' ? 'hurt' : ['white', 'gold', 'orange', 'red'][t], size = [26, 30, 35, 41][t];
+    const U = this.F.U[id], r = dmg / Math.max(1, U && U.st ? U.st.maxHp : 100);
+    // gravité 0..1 : part de vie retirée (35 % = rouge plein)
+    const k = clamp(r / .35, 0, 1);
+    let pal = id[0] === 'L' ? 'hurt' : dmgPal(k), size = Math.round(26 + 15 * k);
     if (o.parried) { pal = 'blue'; size = 22; }
-    if (o.crit) { pal = 'crit'; size += 7; }
+    if (o.crit) { pal = id[0] === 'L' ? 'hurt' : DMG_CRIT; size += 8; }
     this.num(D.x + (Math.random() - .5) * 16, this.top(D) - 2, dmg, pal, size, { label: o.label, lpal: o.lpal, glow: o.glow });
   }
   burst(x, y, col, n, kind) {
@@ -488,14 +506,15 @@ class FightPlayer {
     const tgt = (cur, on) => clamp(cur + (on ? .08 : -.05), 0, 1);
     hv.guard = tgt(hv.guard || 0, U && U.L.shield > 0);
     hv.power = tgt(hv.power || 0, (U && U.L.devastate) || hv.charge > 0);
-    if (hv.guard > 0) { c.save(); c.globalAlpha = .55 * hv.guard; const g = c.createRadialGradient(hv.x, this.chest(hv), 10, hv.x, this.chest(hv), 80); g.addColorStop(0, 'rgba(156,201,255,0)'); g.addColorStop(.7, 'rgba(156,201,255,.35)'); g.addColorStop(1, 'rgba(156,201,255,0)'); c.fillStyle = g; c.beginPath(); c.arc(hv.x, this.chest(hv), 80, 0, TAU); c.fill(); c.restore(); }
+    if (hv.guard > 0) this.drawShield(c, hv, now, false);
+    if (hv.power > 0 && !this.skipped && Math.random() < .35 * hv.power) this.ember(hv);
     if (hv.power > 0) { c.save(); c.globalAlpha = (.45 + .2 * Math.sin(now / 90)) * hv.power; const g = c.createRadialGradient(hv.x, this.chest(hv), 10, hv.x, this.chest(hv), 90); g.addColorStop(0, 'rgba(255,185,148,.5)'); g.addColorStop(1, 'rgba(255,185,148,0)'); c.fillStyle = g; c.beginPath(); c.arc(hv.x, this.chest(hv), 90, 0, TAU); c.fill(); c.restore(); }
     const order = Object.values(this.v).sort((a, b) => (b.pose.rot ? 1 : 0) - (a.pose.rot ? 1 : 0) || a.y - b.y);
     for (const v of order) {
       if (v.glow > 0) { const g = c.createRadialGradient(v.x, this.chest(v), 5, v.x, this.chest(v), 70); g.addColorStop(0, `rgba(120,255,160,${.55 * v.glow})`); g.addColorStop(1, 'rgba(120,255,160,0)'); c.fillStyle = g; c.fillRect(v.x - 80, v.y - 160, 160, 190); }
       if (v.flash > 0) this.drawFlashed(c, v, now); else drawFighter(c, v, now);
     }
-    if (hv.guard > 0) { c.save(); c.globalAlpha = .8 * hv.guard; c.strokeStyle = '#9cc9ff'; c.shadowColor = '#9cc9ff'; c.shadowBlur = 0; c.lineWidth = 2; c.beginPath(); c.ellipse(hv.x, this.chest(hv) - 6, 46, 72, 0, 0, TAU); c.stroke(); c.restore(); }
+    if (hv.guard > 0) this.drawShield(c, hv, now, true);
     this.drawFx(c, dt);
     this.drawOrbs(c, now);
     this.drawStatus(c, now);
@@ -512,6 +531,43 @@ class FightPlayer {
       c.restore();
     }
   }
+  /* Bouclier : dôme protecteur autour du héros tant qu'il reste des charges.
+     Passe arrière (intérieur + maillage) avant le héros, passe avant (liseré, reflet, charges) après lui. */
+  drawShield(c, hv, now, front) {
+    const g = hv.guard, U = this.F && this.F.U, n = U ? U.L.shield : 0, hit = hv.shieldHit || 0;
+    const top = this.top(hv), cx = hv.x - hv.face * 2, cy = (top + hv.y) / 2 + 2, ry = (hv.y - top) / 2 + 16, rx = ry * .62, t = now / 1000;
+    const pulse = 1 + Math.sin(t * 3) * .015 + hit * .06;
+    c.save(); c.translate(cx, cy); c.scale(pulse, pulse);
+    if (!front) {
+      const gr = c.createRadialGradient(0, 0, rx * .2, 0, 0, ry);
+      gr.addColorStop(0, 'rgba(120,200,255,0)'); gr.addColorStop(.72, `rgba(120,200,255,${.16 + hit * .25})`); gr.addColorStop(1, `rgba(170,225,255,${.42 + hit * .4})`);
+      c.globalAlpha = g; c.fillStyle = gr; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.fill();
+      // maillage hexagonal qui défile lentement, découpé dans le dôme
+      c.save(); c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.clip();
+      c.strokeStyle = `rgba(190,232,255,${.22 + hit * .4})`; c.lineWidth = 1; const R = 9, w = R * Math.sqrt(3), off = (t * 8) % (R * 3);
+      for (let yy = -ry - R * 3; yy < ry + R * 3; yy += R * 1.5) for (let xx = -rx - w; xx < rx + w; xx += w) {
+        const ox = xx + ((Math.round((yy + ry) / (R * 1.5)) % 2) ? w / 2 : 0), oy = yy + off;
+        c.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; c.lineTo(ox + Math.cos(a) * R, oy + Math.sin(a) * R); } c.closePath(); c.stroke();
+      }
+      c.restore();
+    } else {
+      c.globalAlpha = g;
+      c.lineWidth = 3.5 + hit * 3; c.strokeStyle = hit > .1 ? '#ffffff' : '#bfe6ff'; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.stroke();
+      c.lineWidth = 1.5; c.strokeStyle = 'rgba(90,170,255,.9)'; c.beginPath(); c.ellipse(0, 0, rx - 4, ry - 4, 0, 0, TAU); c.stroke();
+      // reflet en haut à gauche
+      c.lineWidth = 4; c.lineCap = 'round'; c.strokeStyle = 'rgba(255,255,255,.75)'; c.beginPath(); c.ellipse(0, 0, rx - 9, ry - 9, 0, Math.PI * 1.12, Math.PI * 1.38); c.stroke();
+      // une gemme par charge, qui tourne autour du dôme
+      for (let i = 0; i < n; i++) {
+        const a = t * 1.6 + i * TAU / Math.max(1, n), x = Math.cos(a) * (rx + 2), y = Math.sin(a) * (ry + 2) * .35 - ry * .1;
+        c.save(); c.translate(x, y); c.rotate(Math.PI / 4); c.fillStyle = '#e8f7ff'; c.strokeStyle = '#2f6fbf'; c.lineWidth = 1.6; c.beginPath(); c.rect(-4.5, -4.5, 9, 9); c.fill(); c.stroke(); c.restore();
+      }
+    }
+    c.restore();
+    if (front && hv.shieldHit) hv.shieldHit = Math.max(0, hv.shieldHit - .04);
+  }
+  ember(v) { const x = v.x + (Math.random() - .5) * 46, y = this.chest(v) + 20 - Math.random() * 60; this.fx.push({ kind: 'spark', x, y, vx: (Math.random() - .5) * .03, vy: -.06 - Math.random() * .06, life: 0, max: 520, col: Math.random() < .5 ? '#ffb994' : '#ff7a3c', s: 1.5 + Math.random() * 2, rot: Math.random() * TAU }); }
+  /* Emblème d'une technique : son icône dans un médaillon, qui jaillit au-dessus de la tête (lancement) ou de la cible (effet) */
+  emblem(v, id, col, small) { if (!this.skipped) this.fx.push({ kind: 'emblem', id, col, x: v.x, y: this.top(v) - 8, life: 0, max: small ? 900 : 1300, small }); }
   /* Effets en cours, en pastilles au-dessus des têtes : le joueur voit ce que ses techniques ont posé */
   drawStatus(c, now) {
     const U = this.F && this.F.U; if (!U || this.skipped) return;
@@ -597,6 +653,15 @@ class FightPlayer {
         c.save(); c.translate(f.x, f.y); c.scale(f.face, 1); c.globalAlpha = 1 - k;
         c.beginPath(); c.arc(0, 18, R, -2.2 + k * .6, .3 + k * .3); c.arc(0, 22, R * .78, .3 + k * .3, -2.2 + k * .6, true); c.closePath();
         c.shadowColor = '#ffb994'; c.shadowBlur = 0; c.fillStyle = '#ffffff'; c.fill();
+        c.restore(); c.globalAlpha = 1;
+      } else if (f.kind === 'emblem') {
+        const img = techIcon(f.id); if (!img.complete) continue;
+        const pop = k < .18 ? Ease.outBack(k / .18) : 1, a = k > .7 ? 1 - (k - .7) / .3 : 1, R = (f.small ? 15 : 22) * pop, y = f.y - (f.small ? 18 : 34) * Ease.outCubic(Math.min(1, k * 2));
+        c.save(); c.globalAlpha = a; c.translate(f.x, y);
+        c.fillStyle = 'rgba(24,26,40,.92)'; c.beginPath(); c.arc(0, 0, R + 4, 0, TAU); c.fill();
+        c.lineWidth = 3; c.strokeStyle = f.col; c.beginPath(); c.arc(0, 0, R + 4, 0, TAU); c.stroke();
+        c.fillStyle = f.col; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.fill();
+        c.drawImage(img, -R * .8, -R * .8, R * 1.6, R * 1.6);
         c.restore(); c.globalAlpha = 1;
       } else if (f.kind === 'ring') {
         c.save(); c.globalAlpha = 1 - k; c.strokeStyle = f.col; c.shadowColor = f.col; c.shadowBlur = 0; c.lineWidth = 3 * (1 - k) + 1;
@@ -723,7 +788,7 @@ class FightPlayer {
     const [x, y] = this.arenaXY(ev);
     for (const o of this.orbs) if (!o.got && Math.hypot(o.x - x, o.y - y) < 32) {
       o.got = true; this.orbXp += o.val; Sfx.play('xp');
-      this.num(o.x, o.y - 10, '+' + o.val + ' XP', 'green', 22); this.burst(o.x, o.y, '#ffdb8f', 10);
+      this.num(o.x, o.y - 10, '+' + o.val + ' XP', 'xp', 22); this.burst(o.x, o.y, '#ffdb8f', 10);
       this.o.onOrb && this.o.onOrb(this.orbXp);
       return true;
     }
@@ -806,7 +871,7 @@ class FightPlayer {
     const rank = this.F.actives[e.id] || 1, v = A.val[rank - 1];
     H.glow = e.id === 'soin' ? 1 : 0; setPose(H, 'windup', 18); Sfx.play(cyan ? 'guard' : 'ability'); this.slowmo(.4, 320);
     // lancement : colonne de lumière + double onde + gel + titre centré qui dit ce que fait la technique
-    this.pillar(H, col); this.ring(H, col); setTimeout(() => this.ring(H, '#ffffff'), 90);
+    this.pillar(H, col); this.ring(H, col); setTimeout(() => this.ring(H, '#ffffff'), 90); this.emblem(H, e.id, col);
     this.hitstop(90); this.punch(H, .06); this.flash(col, .24, 300);
     const sub = {
       devaste: `Prochain coup ×${String(v).replace('.', ',')}, inesquivable`,
@@ -821,10 +886,10 @@ class FightPlayer {
     this.log(`${H.name} : ${A.name}. ${sub}.`, 'L');
     await this.wait(180);
     if (e.id === 'soin') { Sfx.play('heal'); this.num(H.x, this.top(H) + 6, '+' + e.heal, 'green', 34, { glow: '#9ef046' }); this.burst(H.x, this.chest(H), '#94e2bd', 14); }
-    else if (e.id === 'cri') { setPose(H, 'victory', 20); this.shake(9); R.stun = 2.4; R.flash = .6; this.ring(R, '#ffdb8f'); this.text(R.x, this.top(R) - 16, 'ÉTOURDI', '#ffdb8f', 20, -.02); }
+    else if (e.id === 'cri') { this.emblem(R, 'cri', col, true); setPose(H, 'victory', 20); this.shake(9); R.stun = 2.4; R.flash = .6; this.ring(R, '#ffdb8f'); this.text(R.x, this.top(R) - 16, 'ÉTOURDI', '#ffdb8f', 20, -.02); }
     else if (e.id === 'devaste') { H.charge = 1; this.burst(H.x, this.chest(H), '#ffb994', 14); }
-    else if (e.id === 'bouclier') { this.clang(H, '#9cc9ff'); this.burst(H.x, this.chest(H), '#9cc9ff', 12); }
-    else if (e.id === 'brise') { R.flash = .7; this.impact(R.x, this.chest(R), false); this.burst(R.x, this.chest(R), '#cfd6de', 16); this.text(R.x, this.top(R) - 10, 'ARMURE BRISÉE', '#cfd6de', 18, -.02); Sfx.play('block'); }
+    else if (e.id === 'bouclier') { H.guard = 1; H.shieldHit = 1; this.burst(H.x, this.chest(H), '#9cc9ff', 18); Sfx.play('guard'); }
+    else if (e.id === 'brise') { this.emblem(R, 'brise', col, true); R.flash = .7; this.impact(R.x, this.chest(R), false); this.burst(R.x, this.chest(R), '#cfd6de', 16); this.text(R.x, this.top(R) - 10, 'ARMURE BRISÉE', '#cfd6de', 18, -.02); Sfx.play('block'); }
     else if (e.id === 'balayage') {
       setPose(H, 'strike', 30); this.shake(7); Sfx.play('crit'); this.hitstop(80);
       for (const t of e.hits) { const tv = this.v[t.id]; tv.flash = 1; setPose(tv, 'hit', 30); this.impact(tv.x, this.chest(tv), true); this.dmgNum(tv, t.id, t.dmg); }
@@ -875,8 +940,9 @@ class FightPlayer {
         this.call('PARADE !', `Dégâts réduits de ${Math.round((1 - PARRY_MULT) * 100)} %`, '#9cc9ff');
       } else { D.flash = 1; setPose(D, 'hit', 32); D.expr = 'hurt'; }
       if (e.shielded) {
-        this.burst(hx, hy, '#9cc9ff', 12); this.clang(D, '#9cc9ff');
+        this.burst(hx, hy, '#9cc9ff', 12); this.clang(D, '#9cc9ff'); D.shieldHit = 1; this.ring(D, '#9cc9ff');
         const left = this.F.U[e.d] ? this.F.U[e.d].shield : 0;
+        if (!left) { this.burst(D.x, this.chest(D), '#bfe6ff', 28); this.burst(D.x, this.chest(D), '#ffffff', 10); this.flash('#9cc9ff', .18, 220); Sfx.play('block'); }
         this.text(D.x, this.top(D) - 44, left > 0 ? `BOUCLIER : ENCORE ${left}` : 'BOUCLIER ÉPUISÉ', '#9cc9ff', 15, -.02);
       }
       this.impact(hx, hy, big); this.burst(hx, hy, e.crit || e.perfect ? '#ffdb8f' : '#ffb994', big ? 16 : 9);
@@ -893,9 +959,9 @@ class FightPlayer {
         this.slowmo(.35, 220); if (Math.random() < .5) this.spawnOrb(D.x, D.y - 40);
       } else if (e.devast) {
         this.hitstop(150); this.punch(D, .12); this.flash('#ffb994', .36); this.rays(D, '#ffb994');
-        this.call('DÉVASTATEUR', 'Coup chargé, impossible à esquiver', '#ffb994'); this.slowmo(.3, 260);
+        this.call('DÉVASTATEUR', 'Coup chargé, impossible à esquiver', '#ffb994'); this.slowmo(.3, 260); this.emblem(D, 'devaste', '#ffb994', true); this.ring(D, '#ffb994');
       } else if (e.crit) { this.hitstop(60); this.flash('#ffffff', .14, 160); this.slowmo(.35, 180); }
-      if (e.pierce) { this.text(D.x, this.top(D) - 58, 'ARMURE IGNORÉE', '#cfd6de', 14, -.02); this.burst(hx, hy, '#cfd6de', 8); }
+      if (e.pierce) { this.text(D.x, this.top(D) - 58, 'ARMURE IGNORÉE', '#cfd6de', 14, -.02); this.burst(hx, hy, '#cfd6de', 12); this.emblem(D, 'brise', '#cfd6de', true); }
       if (e.heal) this.num(A.x, this.top(A) + 4, '+' + e.heal, 'green', 20);
       if (e.thorns) { A.flash = .7; this.num(A.x, this.top(A), '-' + e.thorns, 'hurt', 19); }
       if (e.stun) { D.stun = 1.6; this.text(D.x, this.top(D) - 44, 'ÉTOURDI', '#ffdb8f', 14, -.02); }
@@ -938,7 +1004,7 @@ class FightPlayer {
     this.text(wv.x, this.top(wv) - 20, W === 'L' ? 'VICTOIRE' : 'DÉFAITE', null, 32, -.01, { pal: W === 'L' ? 'level' : 'hurt', max: 1300 });
     if (W === 'L' && this.o.xpWin) { // l'XP gagnée sort de l'adversaire vaincu
       await this.wait(260);
-      this.num(lv.x + lv.face * 10, this.chest(lv), '+' + fmt(this.o.xpWin) + ' XP', 'green', 30, { glow: '#9ef046' }); Sfx.play('xp');
+      this.num(lv.x + lv.face * 10, this.chest(lv), '+' + fmt(this.o.xpWin) + ' XP', 'xp', 30, { glow: '#b48cff' }); Sfx.play('xp');
       this.burst(lv.x, this.chest(lv), '#9ef046', 14);
     }
     await this.wait(1100);

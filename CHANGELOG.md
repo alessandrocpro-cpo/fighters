@@ -5,6 +5,18 @@ Règle : chaque version livrée part en même temps sur la page de test Claude (
 ## Non publié (en cours)
 - (rien)
 
+## 0.9.0 — sur main et page de test (2026-11-23), release à valider
+Tutoriel, sorts lisibles, familiers peints, tour plus longue.
+- Tutoriel progressif : une carte par notion, au moment où on la découvre (bienvenue, coup parfait, parade, technique prête, continuer ou encaisser, première chute, points, familiers au niveau 5, point de technique, butin, portail). En combat, le jeu se met en pause sur le premier cercle et la fenêtre du premier tap est allongée. « Passer le tutoriel » à tout moment
+- Bouclier : dôme protecteur autour du héros tant qu'il reste des charges (maillage, reflet, une gemme par charge), il s'illumine quand il encaisse et éclate quand il est épuisé
+- Techniques : médaillon de la technique au-dessus du héros au lancement, et au-dessus de la cible quand l'effet part (coup dévastateur, brise-armure, cri) ; braises autour du héros tant que le coup dévastateur est chargé
+- Chiffres de dégâts : dégradé continu du jaune (petit coup) au rouge (gros coup), rouge profond en critique
+- XP en lavande, plus jamais dans le même vert que les soins
+- Familiers redessinés dans le style des personnages peints : silhouette d'un seul tenant, grosse tête, modelé, yeux peints, poitrail clair ; plus grands à l'écran
+- Difficulté : pente supplémentaire à partir de l'étage 25 (`DIFF.lateExp` 1,009). Bot : étage 50 en 137 à 206 combats (avant 131 à 151), étage 100 en 680 à 855 combats (avant 331 à 446). Le début ne change pas
+- Correctif : attribuer des points (ou toute action dans un menu) ne fait plus remonter l'écran en haut
+- Balises `noindex` remises dans la page
+
 ## 0.8.1 — release publique (2026-11-23)
 Chiffres et level up façon jeu d'action.
 - Chiffres de dégâts : police ronde épaisse (Lilita One), dégradé vertical, gros contour brun et relief ; ils claquent en grand puis se posent

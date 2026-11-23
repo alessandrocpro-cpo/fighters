@@ -14,6 +14,9 @@ MVP jouable. Ouvrir `index.html` dans un navigateur (mobile ou desktop). Sauvega
 - Démanteler un objet = XP.
 - **Collection** (onglet Héros) façon MyBrute : grille de tous les pouvoirs, armes, familiers et familiers de boss. Débloqué = tuile dorée, verrouillé = estompé, détail au toucher.
 
+## Tutoriel
+Progressif (`COACH` dans 90-main) : une carte par notion, affichée une seule fois au moment de la découverte. Les familiers ne sont présentés qu'au déblocage du 1er emplacement (niveau 5). En combat, pause sur le premier cercle de coup parfait et de parade.
+
 ## Visuel
 Fantasy steampunk au crépuscule, interface en flat design pastel (fonds unis, coins arrondis, ni dégradé ni halo). Une couleur = un sens : beurre (action principale, XP), ciel (défense, info), menthe (positif), pêche (attaque, rage), corail (danger), lavande (choix secondaire). Combattants chibi originaux façon anime peint : grands yeux, frange en mèches, tenue en couches, peints sur un calque puis éclairés (lumière chaude, ombre au sol, liseré de contre-jour à la couleur du monde). Combat plein écran : décor du palier derrière, HUD sur cartes sombres, bannière « Coup parfait », cercle de réflexe « TAPE » / « PARE », jauge de rage et boutons de techniques (1 à 3). 10 mondes (Pont des Flèches, Docks de Brume, Fonderie Écarlate, Toits Néon, Serres de Verre, Bas-Fonds Chimiques, Arène des Barons, Beffroi de Cendre, L'Observatoire, Le Sommet), avec dirigeables et particules. Le décor du palier sert de fond flouté à toute l'app. Polices : Permanent Marker (grands titres), Barlow Semi Condensed (interface et texte). Combattants : personnages peints des packs SpriteCanvas, CC0 / domaine public (« Sprites by SpriteCanvas, spritecanvas.com ») : 3 héros au choix (Chevalier, Samouraï, MechBot) et 12 types d'adversaires déclinés en couleur, taille et silhouette. Packs bruts dans `characters/` (non publiés), convertis en atlas WebP par `tools/sprites.py` (`assets/sprites/`, `src/05-sprites.js`), copiés par le build dans `sprites/` à côté de la page. Décors, interface, familiers et héros « Dessiné » sont dessinés en code.
 
@@ -37,7 +40,7 @@ Fantasy steampunk au crépuscule, interface en flat design pastel (fonds unis, c
 - `node tools/balance.mjs 2500 4` : bot rogue-lite (répartition gloutonne, retraite quand le risque dépasse le gain attendu).
 
 ## Réglages
-- `DIFF` (40-enemy), `xpToNext`, `xpReward`, `WIN_HEAL` (20-character), `POINTS_PER_LEVEL`, `CHOICE_EVERY`, `DEATH_XP_KEEP`, `PET_SLOT_LEVELS`, `BOSS_PET_CHANCE` (10-data).
+- `DIFF` (40-enemy, dont `lateFrom` / `lateExp` : pente de la fin de tour), `xpToNext`, `xpReward`, `WIN_HEAL` (20-character), `POINTS_PER_LEVEL`, `CHOICE_EVERY`, `DEATH_XP_KEEP`, `PET_SLOT_LEVELS`, `BOSS_PET_CHANCE` (10-data).
 
 ## Process de release
 - **Développement continu** : chaque changement est poussé sur GitHub (`main`) et publié sur la page de test Claude.

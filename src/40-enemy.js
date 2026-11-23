@@ -1,7 +1,8 @@
 /* ===== ENNEMIS : un adversaire FIXE par étage (même seed monde = même gardien) ===== */
 /* Courbe de difficulté : puissance cible par étage. Seul réglage à toucher pour l'équilibrage. */
-const DIFF = { p0: 300, lin: .07, exp: 1.022 };
-const targetPower = f => DIFF.p0 * Math.pow(1 + DIFF.lin * (f - 1), 2) * Math.pow(DIFF.exp, f - 1) * (1 - .2 * Math.max(0, 6 - f) / 5);
+const DIFF = { p0: 300, lin: .07, exp: 1.022, lateFrom: 25, lateExp: 1.009 };
+/* lateExp : pente en plus à partir de lateFrom (milieu et fin de tour) : il faut farmer pour monter, le début ne change pas */
+const targetPower = f => DIFF.p0 * Math.pow(1 + DIFF.lin * (f - 1), 2) * Math.pow(DIFF.exp, f - 1) * (1 - .2 * Math.max(0, 6 - f) / 5) * Math.pow(DIFF.lateExp, Math.max(0, f - DIFF.lateFrom));
 
 function makeEnemy(floor, worldSeed) {
   const r = makeRng(hashStr('etage:' + floor + ':' + worldSeed));

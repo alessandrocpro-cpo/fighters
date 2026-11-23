@@ -195,14 +195,21 @@ function setBackdrop(f) {
   const ti = tierIdx(f); if (_bdTier === ti) return; _bdTier = ti;
   try { document.body.style.setProperty('--bd', `url(${arenaBackground(f, 1).toDataURL('image/jpeg', .8)})`); } catch (e) { /* fond uni de secours */ }
 }
+/* Garde la position de défilement quand on reste sur le même écran (ex. attribuer des points) */
+let _scrollKey = null;
+const scrollKey = () => S ? tab + ':' + (tab === 'heros' ? heroSub : '') + ':' + (S.run ? 'run' : 'camp') : 'create';
 function render() {
   const app = document.getElementById('app');
+  const prev = app.querySelector('.scroll'), key = scrollKey(), keep = prev && key === _scrollKey ? prev.scrollTop : 0;
   app.innerHTML = '';
   Music.set('menu');
   setBackdrop(S ? (S.run ? S.run.floor : Math.max(...S.portals)) : 1);
   if (!S) { renderCreate(app); return; }
   const body = tab === 'tour' ? tabTour() : tab === 'heros' ? tabHero() : tabBag();
   app.append(renderTop(), body, renderNav());
+  _scrollKey = key;
+  if (keep && body.classList && body.classList.contains('scroll')) { body.scrollTop = keep; requestAnimationFrame(() => { body.scrollTop = keep; }); }
+  setTimeout(() => coachMenu(0), 450);
   const L = S.lastRun; // niveau gagné en fin de run : on le fête une fois
   if (L && L.lvNew) { delete L.lvNew; save(); setTimeout(() => showLevelUp(L.from, L.to), 300); }
 }
@@ -320,6 +327,50 @@ function pickTip() {
   if (S.portals.length > 1) want.push('portal');
   return want.find(k => !S.tips[k]);
 }
+/* ---------- Tutoriel progressif : une carte par notion, au moment où le joueur la découvre ---------- */
+const COACH = {
+  welcome: { ic: 'tower', t: 'Bienvenue dans la Tour', x: ['Chaque étage cache un adversaire : bats-le pour monter.', 'Tes victoires rapportent de l\'XP et du butin pour renforcer ton héros.'] },
+  tap: { ic: 'epee', t: 'Coup parfait', x: ['Quand le cercle doré se referme sur l\'adversaire, tape l\'écran.', 'Au bon moment : dégâts ×1,5. Trop tôt ou trop tard : coup normal.'], cta: 'À moi !' },
+  parry: { ic: 'shield', t: 'Coup dangereux « ! »', x: ['Le cercle devient bleu : tape quand il se referme sur toi.', 'Parade réussie : dégâts réduits de 70 %.'], cta: 'Je pare' },
+  rage: { ic: 't_devaste', t: 'Technique prête', x: ['Ta rage monte quand tu frappes et quand tu encaisses.', 'Elle suffit : touche ta technique en bas de l\'écran pour la lancer.'] },
+  stake: { ic: 'lock', t: 'Continuer ou encaisser', x: ['Continuer : étage suivant, plus d\'XP et de butin, plus de danger.', 'Encaisser : tu gardes tout. Si tu tombes, tu perds le butin du run et la moitié de l\'XP.'] },
+  death: { ic: 'heart', t: 'Ce n\'est qu\'un début', x: ['Tu gardes la moitié de l\'XP du run.', 'Répartis tes points, équipe-toi, et retente : chaque run te rend plus fort.'] },
+  points: { ic: 'hero', t: 'Points à répartir', x: ['Chaque niveau donne 3 points : Force, Agilité, Vitesse, Vitalité.', 'Onglet Héros : place-les toi-même ou touche « Répartir auto ».'] },
+  bag: { ic: 'bag', t: 'Ton butin', x: ['Chaque objet affiche ce qu\'il t\'apporte (▲ +N) ou ▼ s\'il est moins bon.', '« Tout optimiser » équipe le meilleur et démantèle le reste contre de l\'XP.'] },
+  tech: { ic: 't_brise', t: 'Point de technique', x: ['Apprends ou améliore une technique dans l\'onglet Héros, section Techniques.', 'Sur la fiche de l\'adversaire, choisis lesquelles emporter selon ses traits.'] },
+  pets: { ic: 'paw', t: 'Familiers débloqués', x: ['Un familier combat à tes côtés et prend des coups à ta place.', 'Tu en trouves sur les étages et chez les boss. 2e et 3e emplacements aux niveaux 15 et 30.'] },
+  portal: { ic: 'portal', t: 'Portail ouvert', x: ['Tu peux démarrer un run juste après le boss vaincu.', 'Chaque boss garde un familier exclusif rare : reviens le farmer.'] },
+};
+let _coachOpen = false;
+const coachDone = k => !S || (S.tuto && (S.tuto.off || S.tuto[k]));
+function coach(key) {
+  return new Promise(done => {
+    if (coachDone(key) || _coachOpen) return done(false);
+    S.tuto = S.tuto || {}; S.tuto[key] = 1; save(); _coachOpen = true;
+    const C = COACH[key], n = Object.keys(S.tuto).filter(k => COACH[k]).length, inFight = !!document.querySelector('.fight');
+    const fin = () => { _coachOpen = false; done(true); if (!inFight) setTimeout(() => coachMenu(0), 500); };
+    overlay(close => [
+      h('div', { class: 'coach' },
+        h('div', { class: 'coach-ic' }, icon(C.ic, 34)),
+        h('div', { class: 'label' }, `Tutoriel · ${n} / ${Object.keys(COACH).length}`),
+        h('h2', null, C.t),
+        C.x.map(t => h('p', null, t)),
+        h('button', { class: 'btn btn-gold', onclick: () => { close(); } }, C.cta || 'Compris'),
+        h('button', { class: 'btn btn-ghost btn-sm', onclick: () => { S.tuto.off = 1; save(); close(); } }, 'Passer le tutoriel')),
+    ], { center: !inFight, dismiss: false, onclose: fin, cls: inFight ? 'coach-top' : '' }); // en combat : carte en haut, l'arène reste visible
+  });
+}
+/* Écrans de menu : propose au plus une carte, dans l'ordre de découverte, quand rien d'autre n'est affiché */
+function coachMenu(tries) {
+  if (!S || _coachOpen || (S.tuto && S.tuto.off)) return;
+  if (document.querySelector('.lvup, .ov, .fight, .souls-screen')) { if ((tries || 0) < 12) setTimeout(() => coachMenu((tries || 0) + 1), 700); return; }
+  const want = [
+    !S.stats.fights && 'welcome', S.hero.points > 0 && 'points', petSlots(S.hero.level) > 0 && 'pets',
+    S.hero.tp > 0 && S.hero.level > 1 && 'tech', S.inv.length && tab === 'sac' && 'bag', S.portals.length > 1 && 'portal',
+  ].filter(Boolean);
+  const k = want.find(x => !coachDone(x));
+  if (k && !coachDone(k)) coach(k);
+}
 function oddsInfo(wc) {
   if (wc >= .85) return ['Écrasant', '#94e2bd'];
   if (wc >= .6) return ['Favorable', '#c8e89a'];
@@ -375,7 +426,7 @@ function tabTour() {
     h('div', { class: 'tier' }, h('h2', null, T.name), h('span', { class: 'label num' }, `Record ${S.best} / ${TOWER_TOP}`)),
     h('div', { class: 'prog' }, h('i', { style: { width: Math.min(100, S.best) + '%' } }))));
   const tip = pickTip();
-  if (tip) sc.append(h('div', { class: 'tip' }, icon('xp', 20), h('span', null, TIPS[tip]), h('button', { 'aria-label': 'Fermer', onclick: () => { S.tips[tip] = 1; save(); render(); } }, '×')));
+  void tip; // remplacé par le tutoriel progressif (coach)
   if (S.run) runView(sc); else campView(sc);
   return sc;
 }
@@ -512,6 +563,7 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
     onRage: F2 => {
       const r = F2.rage(); rageFill.style.width = r / RAGE.max * 100 + '%'; rageVal.textContent = `${r} / ${RAGE.max}`;
       for (const id in tbtns) { const b = tbtns[id], q = fp.queue.includes(id); b.classList.toggle('ready', F2.canUse(id) || q); b.classList.toggle('armed', q); }
+      if (!coachDone('rage') && coachDone('tap') && Object.keys(tbtns).some(id => F2.canUse(id)) && !fp.qte && !fp.skipped) { fp.togglePause(true); coach('rage').then(() => fp.togglePause(false)); }
     },
     onActive: id => { // technique partie : le bouton s'illumine, la jauge se vide en flash
       const b = tbtns[id]; if (b) { b.classList.remove('armed'); pulse(b, 'fired'); }
@@ -521,6 +573,8 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
     onOrb: x => { orbTag.textContent = `+${x} XP`; },
     hint: () => (S.tips.qteN || 0) < 4,
     onQteStart: (kind, n) => {
+      const key = kind === 'perfect' ? 'tap' : 'parry';
+      if (!coachDone(key)) { fp.togglePause(true); coach(key).then(() => { if (fp.qte) { fp.qte.real = 0; fp.qte.dur *= 1.8; } fp.togglePause(false); }); return; }
       if (kind === 'perfect' && n === 1 && (S.tips.qteBanner || 0) < 3) { S.tips.qteBanner = (S.tips.qteBanner || 0) + 1; showBanner('Coup parfait', 'Tape quand le cercle se ferme', null, 1500); }
       if (kind === 'parry' && !shownParry && (S.tips.parryBanner || 0) < 3) { shownParry = true; S.tips.parryBanner = (S.tips.parryBanner || 0) + 1; showBanner('Coup dangereux', 'Tape pour parer', null, 1300); }
     },
@@ -585,6 +639,7 @@ function showVictory(out, fp, root) {
     h('button', { class: 'btn btn-soul', onclick: () => { ov.close(); endRun('retreat'); Sfx.play('level'); leaveFight(fp, root); } }, h('span', null, 'Encaisser', h('small', null, `${fmt(run.xp)} XP · ${run.loot.length} obj.`)))));
   items.push(h('button', { class: 'btn btn-ghost', onclick: () => { ov.close(); leaveFight(fp, root); } }, 'Voir l\'adversaire, changer de techniques'));
   const ov = overlay(items, { dismiss: false });
+  setTimeout(() => coach('stake'), 500);
 }
 function showDeath(out, fp, root) {
   Sfx.play('death'); Music.set(null);
@@ -597,6 +652,7 @@ function showDeath(out, fp, root) {
     heroTodo() ? h('button', { class: 'btn btn-stone', onclick: () => { scr.remove(); tab = 'heros'; heroSub = S.hero.points || S.hero.choices ? 'stats' : 'tech'; leaveFight(fp, root); } }, 'Améliorer mon héros') :
       h('button', { class: 'btn btn-ghost', style: { color: '#c9c2e6' }, onclick: () => { scr.remove(); leaveFight(fp, root); } }, 'Retour'));
   document.getElementById('app').append(scr);
+  setTimeout(() => coach('death'), 900);
 }
 
 /* ---------- Onglet Héros : répartition des points ---------- */

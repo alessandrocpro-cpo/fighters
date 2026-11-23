@@ -110,7 +110,7 @@ function itemMainStat(it) {
 
 function overlay(content, o) {
   o = o || {};
-  const ov = h('div', { class: 'ov' + (o.center ? ' center' : '') });
+  const ov = h('div', { class: 'ov' + (o.center ? ' center' : '') + (o.cls ? ' ' + o.cls : '') });
   const close = () => { ov.remove(); o.onclose && o.onclose(); };
   ov.addEventListener('click', e => { if (e.target === ov && o.dismiss !== false) close(); });
   const sheet = h('div', { class: 'sheet' }, typeof content === 'function' ? content(close) : content);
