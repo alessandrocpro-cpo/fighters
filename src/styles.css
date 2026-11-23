@@ -360,3 +360,9 @@ h1, h2, h3 { margin: 0; font-family: var(--f-display); font-weight: 400; letter-
 .abil.n3 .ab .cost { left: 50%; transform: translateX(-50%); }
 .abil.n3 .ab em { display: none; }
 .notech { padding: 14px 10px; text-align: center; font-family: var(--f-ui); font-size: 14px; color: var(--muted); background: var(--surface-2); border-radius: 12px; }
+
+/* LEVEL UP plein écran (0.8.1) */
+.lvup { position: absolute; inset: 0; z-index: 55; background: radial-gradient(ellipse at 50% 55%, rgba(48,32,12,.9), rgba(10,8,20,.97) 72%); animation: fade .25s; cursor: pointer; }
+.lvup.out { opacity: 0; transition: opacity .3s; }
+.lvcv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.lvtap { position: absolute; left: 0; right: 0; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); text-align: center; font-family: var(--f-ui); font-weight: 600; font-size: 14px; color: rgba(255,244,220,.7); animation: fade .4s .9s both; }

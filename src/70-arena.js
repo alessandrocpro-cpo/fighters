@@ -330,6 +330,40 @@ function drawShip(c, x, y, s, col, win, face) {
   c.restore();
 }
 
+/* ---------- Chiffres de jeu ----------
+   Police ronde épaisse, dégradé vertical (clair en haut, foncé en bas), gros contour brun et relief décalé.
+   La palette dit le poids du coup : blanc < or < orange < rouge ; critique rouge flamboyant ; vert = soin / XP. */
+const NUM_FONT = '"Lilita One", "Arial Black", Impact, sans-serif';
+const NUM_EDGE = '#2b160c';
+const NUM_PAL = {
+  white:  ['#ffffff', '#fff4dc', '#ffd27a'],
+  gold:   ['#fffbd2', '#ffd43f', '#ff9a12'],
+  orange: ['#ffe58f', '#ff9426', '#ec540e'],
+  red:    ['#ffd56e', '#ff5524', '#c3141d'],
+  crit:   ['#fff09a', '#ff6a22', '#cf1426'],
+  blue:   ['#f2fbff', '#8fd0ff', '#3a86e6'],
+  green:  ['#f6ffc8', '#9ef046', '#2fa82a'],
+  pink:   ['#ffe2f2', '#ff7ab8', '#cc2c78'],
+  hurt:   ['#ffe6e6', '#ff7d86', '#cf2440'],
+  steel:  ['#ffffff', '#e2e8f0', '#97a6b8'],
+  level:  ['#fff8c4', '#ffd23c', '#e8840c'],
+};
+const _palc = {};
+const palOf = col => _palc[col] || (_palc[col] = [mix(col, '#ffffff', .7), col, mix(col, '#2b160c', .22)]);
+function fancyText(c, str, x, y, size, pal, maxW) {
+  const P = Array.isArray(pal) ? pal : NUM_PAL[pal] || palOf(pal || '#ffffff');
+  c.save();
+  c.font = `${size}px ${NUM_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round'; c.miterLimit = 2;
+  c.strokeStyle = NUM_EDGE; c.fillStyle = NUM_EDGE; c.lineWidth = Math.max(3, size * .26);
+  // relief : la même forme, décalée vers le bas, puis le contour
+  c.strokeText(str, x, y + size * .1, maxW); c.fillText(str, x, y + size * .1, maxW);
+  c.strokeText(str, x, y, maxW);
+  const g = c.createLinearGradient(0, y - size * .4, 0, y + size * .36);
+  g.addColorStop(0, P[0]); g.addColorStop(.48, P[1]); g.addColorStop(1, P[2]);
+  c.fillStyle = g; c.fillText(str, x, y, maxW);
+  c.restore();
+}
+
 /* ---------- Lecteur de combat interactif ----------
    Pilote le moteur pas à pas (createFight) : coup parfait sur les attaques du héros, parade sur les coups
    dangereux « ! », techniques lancées avec la rage, orbes d'XP à attraper. Le rendu suit le style néon. */
@@ -364,7 +398,21 @@ class FightPlayer {
   move(v, x, y, ms, ease) { return Promise.all([this.tween(v, 'x', x, ms, ease), this.tween(v, 'y', y, ms, ease)]); }
   shake(a) { this.shakeAmt = Math.max(this.shakeAmt, a); }
   slowmo(f, ms) { this.slow = f; setTimeout(() => { if (!this.qte) this.slow = 1; }, ms); }
-  text(x, y, str, col, size, vy) { if (!this.skipped) this.texts.push({ x, y, str, col, size: size || 18, life: 0, max: 900, vy: vy == null ? -.045 : vy }); }
+  text(x, y, str, col, size, vy, o) {
+    if (this.skipped) return; o = o || {};
+    this.texts.push({ x, y, str, size: size || 18, pal: o.pal || col, label: o.label, lpal: o.lpal, glow: o.glow, num: o.num, life: 0, max: o.max || 900, vy: vy == null ? -.045 : vy });
+  }
+  /* Gros chiffre de dégâts / soin / XP */
+  num(x, y, str, pal, size, o) { this.text(x, y, String(str), null, size, -.03, { ...o, pal, num: true, max: 1150 }); }
+  /* Couleur et taille selon la part de PV retirée ; rouge rosé quand c'est le héros qui encaisse */
+  dmgNum(D, id, dmg, o) {
+    o = o || {};
+    const U = this.F.U[id], r = dmg / Math.max(1, U && U.st ? U.st.maxHp : 100), t = r < .08 ? 0 : r < .16 ? 1 : r < .3 ? 2 : 3;
+    let pal = id[0] === 'L' ? 'hurt' : ['white', 'gold', 'orange', 'red'][t], size = [26, 30, 35, 41][t];
+    if (o.parried) { pal = 'blue'; size = 22; }
+    if (o.crit) { pal = 'crit'; size += 7; }
+    this.num(D.x + (Math.random() - .5) * 16, this.top(D) - 2, dmg, pal, size, { label: o.label, lpal: o.lpal, glow: o.glow });
+  }
   burst(x, y, col, n, kind) {
     if (this.skipped) return;
     for (let i = 0; i < n; i++) { const a = Math.random() * TAU, sp = .08 + Math.random() * .25; this.fx.push({ kind: kind || 'spark', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (kind === 'dust' ? .02 : .05), life: 0, max: 260 + Math.random() * 220, col, s: 2 + Math.random() * 3, rot: Math.random() * TAU }); }
@@ -585,12 +633,17 @@ class FightPlayer {
     for (const tx of this.texts.slice()) {
       tx.life += dt; const k = tx.life / tx.max;
       if (k >= 1) { this.texts.splice(this.texts.indexOf(tx), 1); continue; }
-      tx.y += tx.vy * dt;
-      const pop = k < .15 ? Ease.outBack(k / .15) : 1;
-      c.save(); c.translate(tx.x, tx.y); c.rotate(-.06); c.scale(pop, pop); c.globalAlpha = k > .7 ? 1 - (k - .7) / .3 : 1;
-      c.font = `${tx.size}px "Permanent Marker", Impact, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.lineJoin = 'round'; c.lineWidth = tx.size * .28; c.strokeStyle = INK; c.strokeText(tx.str, 0, 0);
-      c.shadowColor = tx.col; c.shadowBlur = 0; c.fillStyle = tx.col; c.fillText(tx.str, 0, 0);
+      tx.y += tx.vy * dt * (tx.num && k < .12 ? .2 : 1);
+      // les chiffres claquent (gros puis se posent), les mots apparaissent en douceur
+      const pop = tx.num ? (k < .12 ? 1.75 - .75 * Ease.outBack(k / .12) : 1) : (k < .15 ? Ease.outBack(k / .15) : 1);
+      c.save(); c.translate(tx.x, tx.y); c.scale(pop, pop); c.globalAlpha = k > .72 ? 1 - (k - .72) / .28 : 1;
+      if (tx.glow) {
+        const R = tx.size * 1.5, g = c.createRadialGradient(0, 0, 2, 0, 0, R);
+        g.addColorStop(0, hexA(tx.glow, .7)); g.addColorStop(.45, hexA(tx.glow, .28)); g.addColorStop(1, hexA(tx.glow, 0));
+        c.fillStyle = g; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.fill();
+      }
+      if (tx.label) { c.save(); c.rotate(-.05); fancyText(c, tx.label, 0, -tx.size * .78, Math.round(tx.size * .44), tx.lpal || 'gold'); c.restore(); }
+      fancyText(c, tx.str, 0, 0, tx.size, tx.pal);
       c.restore();
     }
   }
@@ -670,7 +723,7 @@ class FightPlayer {
     const [x, y] = this.arenaXY(ev);
     for (const o of this.orbs) if (!o.got && Math.hypot(o.x - x, o.y - y) < 32) {
       o.got = true; this.orbXp += o.val; Sfx.play('xp');
-      this.text(o.x, o.y - 10, '+' + o.val + ' XP', '#ffdb8f', 18); this.burst(o.x, o.y, '#ffdb8f', 10);
+      this.num(o.x, o.y - 10, '+' + o.val + ' XP', 'green', 22); this.burst(o.x, o.y, '#ffdb8f', 10);
       this.o.onOrb && this.o.onOrb(this.orbXp);
       return true;
     }
@@ -740,10 +793,10 @@ class FightPlayer {
     if (e.type === 'down') { const v = this.v[e.id]; setPose(v, 'ko', 8); v.expr = 'ko'; this.tween(v, 'alpha', .55, 500); this.log(`${v.name} est hors de combat.`, e.id[0]); if (e.id[0] === 'R') this.spawnOrb(v.x, v.y - 30); }
     else if (e.type === 'skill') {
       const v = this.v[e.who]; v.glow = 1; Sfx.play('heal');
-      this.text(v.x, this.top(v) - 14, 'SECOND SOUFFLE', '#94e2bd', 15, -.02); this.text(v.x, this.top(v) + 10, '+' + e.heal, '#94e2bd', 20);
+      this.text(v.x, this.top(v) - 14, 'SECOND SOUFFLE', '#94e2bd', 15, -.02); this.num(v.x, this.top(v) + 10, '+' + e.heal, 'green', 26);
       this.log(`${v.name} reprend son souffle (+${e.heal} PV).`, e.who[0]);
       await this.wait(500);
-    } else if (e.type === 'regen') { const v = this.v[e.who]; this.text(v.x + 12, this.top(v) + 8, '+' + e.heal, '#94e2bd', 13); }
+    } else if (e.type === 'regen') { const v = this.v[e.who]; this.num(v.x + 12, this.top(v) + 8, '+' + e.heal, 'green', 16); }
     else if (e.type === 'stunned') { const v = this.v[e.who]; v.stun = 1.2; this.text(v.x, this.top(v) - 20, 'SONNÉ', '#ffdb8f', 15, -.02); this.log(`${v.name} est sonné et perd son tour.`, e.who[0]); await this.wait(420); }
     else if (e.type === 'active') await this.playActive(e);
   }
@@ -767,14 +820,14 @@ class FightPlayer {
     this.o.onActive && this.o.onActive(e.id);
     this.log(`${H.name} : ${A.name}. ${sub}.`, 'L');
     await this.wait(180);
-    if (e.id === 'soin') { Sfx.play('heal'); this.text(H.x, this.top(H) + 6, '+' + e.heal, '#94e2bd', 30); this.burst(H.x, this.chest(H), '#94e2bd', 14); }
+    if (e.id === 'soin') { Sfx.play('heal'); this.num(H.x, this.top(H) + 6, '+' + e.heal, 'green', 34, { glow: '#9ef046' }); this.burst(H.x, this.chest(H), '#94e2bd', 14); }
     else if (e.id === 'cri') { setPose(H, 'victory', 20); this.shake(9); R.stun = 2.4; R.flash = .6; this.ring(R, '#ffdb8f'); this.text(R.x, this.top(R) - 16, 'ÉTOURDI', '#ffdb8f', 20, -.02); }
     else if (e.id === 'devaste') { H.charge = 1; this.burst(H.x, this.chest(H), '#ffb994', 14); }
     else if (e.id === 'bouclier') { this.clang(H, '#9cc9ff'); this.burst(H.x, this.chest(H), '#9cc9ff', 12); }
     else if (e.id === 'brise') { R.flash = .7; this.impact(R.x, this.chest(R), false); this.burst(R.x, this.chest(R), '#cfd6de', 16); this.text(R.x, this.top(R) - 10, 'ARMURE BRISÉE', '#cfd6de', 18, -.02); Sfx.play('block'); }
     else if (e.id === 'balayage') {
       setPose(H, 'strike', 30); this.shake(7); Sfx.play('crit'); this.hitstop(80);
-      for (const t of e.hits) { const tv = this.v[t.id]; tv.flash = 1; setPose(tv, 'hit', 30); this.impact(tv.x, this.chest(tv), true); this.text(tv.x, this.top(tv) + 4, String(t.dmg), '#ffdb8f', 28); }
+      for (const t of e.hits) { const tv = this.v[t.id]; tv.flash = 1; setPose(tv, 'hit', 30); this.impact(tv.x, this.chest(tv), true); this.dmgNum(tv, t.id, t.dmg); }
     }
     this.setHp(e.hp);
     await this.wait(700);
@@ -829,8 +882,11 @@ class FightPlayer {
       this.impact(hx, hy, big); this.burst(hx, hy, e.crit || e.perfect ? '#ffdb8f' : '#ffb994', big ? 16 : 9);
       this.shake(e.devast ? 10 : big ? 7 : e.parried ? 2 : 3.2);
       Sfx.play(big ? 'crit' : 'hit');
-      const dcol = e.parried ? '#9cc9ff' : big ? '#ffdb8f' : '#ffffff';
-      this.text(D.x + (Math.random() - .5) * 18, this.top(D) + 4, String(e.dmg), dcol, e.perfect || e.devast ? 40 : big ? 32 : e.parried ? 20 : 24);
+      this.dmgNum(D, e.d, e.dmg, {
+        parried: e.parried, crit: e.crit || e.perfect || e.devast,
+        label: e.crit ? 'CRITIQUE' : e.heavy ? 'FRACAS' : null, lpal: e.crit ? 'gold' : 'orange',
+        glow: e.perfect ? '#ffd43f' : e.devast ? '#ff7ab8' : e.crit ? '#ff9a3a' : null,
+      });
       if (e.perfect) {
         this.hitstop(130); this.punch(D, .1); this.flash('#ffdb8f', .32); this.rays(D, '#ffdb8f');
         this.call('COUP PARFAIT', `Dégâts ×${String(PERFECT_MULT).replace('.', ',')}${this.streak >= 2 ? ` · série de ${this.streak}` : ''}`, '#ffdb8f');
@@ -838,12 +894,11 @@ class FightPlayer {
       } else if (e.devast) {
         this.hitstop(150); this.punch(D, .12); this.flash('#ffb994', .36); this.rays(D, '#ffb994');
         this.call('DÉVASTATEUR', 'Coup chargé, impossible à esquiver', '#ffb994'); this.slowmo(.3, 260);
-      } else if (e.crit) { this.text(D.x, this.top(D) - 26, 'CRITIQUE', '#ffdb8f', 20, -.02); this.hitstop(60); this.flash('#ffffff', .14, 160); this.slowmo(.35, 180); }
-      else if (e.heavy) this.text(D.x, this.top(D) - 26, 'FRACAS', '#ffb994', 18, -.02);
-      if (e.pierce) { this.text(D.x, this.top(D) - 46, 'ARMURE IGNORÉE', '#cfd6de', 14, -.02); this.burst(hx, hy, '#cfd6de', 8); }
-      if (e.heal) this.text(A.x, this.top(A) + 4, '+' + e.heal, '#94e2bd', 16);
-      if (e.thorns) { A.flash = .7; this.text(A.x, this.top(A), '-' + e.thorns, '#ff9b9b', 15); }
-      if (e.stun) { D.stun = 1.6; this.text(D.x, this.top(D) - 36, 'ÉTOURDI', '#ffdb8f', 13, -.02); }
+      } else if (e.crit) { this.hitstop(60); this.flash('#ffffff', .14, 160); this.slowmo(.35, 180); }
+      if (e.pierce) { this.text(D.x, this.top(D) - 58, 'ARMURE IGNORÉE', '#cfd6de', 14, -.02); this.burst(hx, hy, '#cfd6de', 8); }
+      if (e.heal) this.num(A.x, this.top(A) + 4, '+' + e.heal, 'green', 20);
+      if (e.thorns) { A.flash = .7; this.num(A.x, this.top(A), '-' + e.thorns, 'hurt', 19); }
+      if (e.stun) { D.stun = 1.6; this.text(D.x, this.top(D) - 44, 'ÉTOURDI', '#ffdb8f', 14, -.02); }
       this.setHp(e.hp);
       this.log(`${A.name} frappe ${D.name} : ${e.dmg}${e.crit ? ' (critique)' : ''}${e.parried ? ' (paré)' : ''}${e.perfect ? ' (parfait)' : ''}.`, sideA);
       this.tween(D, 'x', D.x + A.face * 9, 90);
@@ -880,7 +935,12 @@ class FightPlayer {
       if (id[0] === W) { v.running = false; setPose(v, 'victory', 6); v.expr = 'grin'; }
     }
     const wv = this.v[W];
-    this.text(wv.x, this.top(wv) - 20, W === 'L' ? 'VICTOIRE' : 'DÉFAITE', W === 'L' ? '#ffdb8f' : '#ff9b9b', 30, -.01);
+    this.text(wv.x, this.top(wv) - 20, W === 'L' ? 'VICTOIRE' : 'DÉFAITE', null, 32, -.01, { pal: W === 'L' ? 'level' : 'hurt', max: 1300 });
+    if (W === 'L' && this.o.xpWin) { // l'XP gagnée sort de l'adversaire vaincu
+      await this.wait(260);
+      this.num(lv.x + lv.face * 10, this.chest(lv), '+' + fmt(this.o.xpWin) + ' XP', 'green', 30, { glow: '#9ef046' }); Sfx.play('xp');
+      this.burst(lv.x, this.chest(lv), '#9ef046', 14);
+    }
     await this.wait(1100);
   }
   togglePause(on) { this.paused = on == null ? !this.paused : on; }

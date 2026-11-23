@@ -114,6 +114,7 @@ function endRun(reason) {
   S.lastRun = { reason, start: run.start, reached: run.floor - (reason === 'death' ? 0 : 1), wins: run.wins, xp: kept, xpLost: run.xp - kept, from, to: S.hero.level, points: levels * POINTS_PER_LEVEL, lost, secured };
   S.run = null; S.tips.start = 1;
   if (S.autoEquip !== false) { const r = optimizeAll(S.autoSell === false ? -1 : 1); S.lastRun.equipped = r.eq; S.lastRun.sold = r.sold; S.lastRun.soldXp = r.xp; if (r.lv) { S.lastRun.to = S.hero.level; S.lastRun.points += r.lv * POINTS_PER_LEVEL; } }
+  S.lastRun.lvNew = S.lastRun.to > from;
   if (S.autoAlloc && S.hero.points) { alloc = { str: 0, agi: 0, spd: 0, end: 0 }; autoAlloc(S.hero.points); for (const k of STAT_KEYS) S.hero.base[k] += alloc[k]; S.hero.points = 0; alloc = null; }
   save();
 }
@@ -171,7 +172,7 @@ function autoEquipAll() {
 function salvage(it, quiet) {
   S.inv.splice(S.inv.indexOf(it), 1); const v = salvageValue(it);
   const lv = grantXp(S.hero, v);
-  if (!quiet) { save(); Sfx.play(lv ? 'level' : 'xp'); if (lv) setTimeout(() => toast(`Niveau ${S.hero.level} ! +${lv * POINTS_PER_LEVEL} points`), 900); }
+  if (!quiet) { save(); if (lv) setTimeout(() => showLevelUp(S.hero.level - lv, S.hero.level), 400); else Sfx.play('xp'); }
   return v;
 }
 /* Objets inutiles : moins bons que l'équipement actuel. On garde les légendaires, les familiers de boss,
@@ -202,6 +203,71 @@ function render() {
   if (!S) { renderCreate(app); return; }
   const body = tab === 'tour' ? tabTour() : tab === 'heros' ? tabHero() : tabBag();
   app.append(renderTop(), body, renderNav());
+  const L = S.lastRun; // niveau gagné en fin de run : on le fête une fois
+  if (L && L.lvNew) { delete L.lvNew; save(); setTimeout(() => showLevelUp(L.from, L.to), 300); }
+}
+/* LEVEL UP : le héros dans un cercle magique doré, colonne de lumière, étincelles, gros titre */
+function showLevelUp(from, to) {
+  Sfx.init(); Sfx.play('level');
+  const pts = S.hero.points;
+  const cv = h('canvas', { class: 'lvcv' });
+  const ov = h('div', { class: 'lvup' }, cv, h('div', { class: 'lvtap' }, 'Touche pour continuer'));
+  document.getElementById('app').append(ov);
+  const v = heroView(makeView(S.hero, S.equip, 'L', 0, 0), true); setPose(v, 'victory', 6); v.expr = 'grin';
+  const stars = []; let t0 = performance.now(), last = t0, end = 0;
+  const close = () => { if (end) return; end = performance.now(); ov.classList.add('out'); setTimeout(() => ov.remove(), 320); };
+  ov.onclick = close; setTimeout(close, 3600);
+  const star = (c, x, y, r) => { c.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = i % 2 ? r * .22 : r; c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); c.fill(); };
+  const frame = now => {
+    if (!ov.isConnected) return;
+    const dt = Math.min(50, now - last); last = now; const t = now - t0;
+    const dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+    const gx = W / 2, gy = H * .7, s = Math.min(H * .36, W * .62) / 160, k = Math.min(1, t / 450), grow = Ease.outBack(k);
+    // halo de fond
+    let g = c.createRadialGradient(gx, gy - 80 * s, 10, gx, gy - 80 * s, Math.max(W, H) * .7);
+    g.addColorStop(0, 'rgba(255,214,110,.32)'); g.addColorStop(1, 'rgba(255,214,110,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+    // cercle magique au sol (vue rasante), qui tourne
+    const R = 108 * s * grow;
+    c.save(); c.translate(gx, gy); c.scale(1, .3); c.rotate(t / 2600);
+    c.globalCompositeOperation = 'lighter';
+    const ringP = (r, lw, a) => { c.globalAlpha = a; c.lineWidth = lw; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.stroke(); };
+    c.strokeStyle = '#ffcf5a'; ringP(R, 7 * s, .25); ringP(R, 2.4 * s, .95); ringP(R * .86, 1.6 * s, .9); ringP(R * .36, 1.6 * s, .8);
+    c.globalAlpha = .9; c.lineWidth = 1.8 * s;
+    for (const off of [0, Math.PI]) { c.beginPath(); for (let i = 0; i < 3; i++) { const a = off + i * TAU / 3 - Math.PI / 2; c.lineTo(Math.cos(a) * R * .86, Math.sin(a) * R * .86); } c.closePath(); c.stroke(); }
+    c.lineWidth = 1.4 * s; for (let i = 0; i < 24; i++) { const a = i * TAU / 24; c.beginPath(); c.moveTo(Math.cos(a) * R * .88, Math.sin(a) * R * .88); c.lineTo(Math.cos(a) * R * (i % 2 ? .95 : .98), Math.sin(a) * R * (i % 2 ? .95 : .98)); c.stroke(); }
+    c.restore();
+    // colonne de lumière qui monte du cercle
+    c.save(); c.globalCompositeOperation = 'lighter';
+    const pw = R * .7 * (1 + .06 * Math.sin(t / 120)), pa = (t < 300 ? t / 300 : 1) * (.55 + .15 * Math.sin(t / 90));
+    g = c.createLinearGradient(0, gy - H * .7, 0, gy); g.addColorStop(0, 'rgba(255,240,190,0)'); g.addColorStop(.7, `rgba(255,226,140,${.5 * pa})`); g.addColorStop(1, `rgba(255,250,220,${.9 * pa})`);
+    c.fillStyle = g; c.beginPath(); c.moveTo(gx - pw * .55, gy - H * .7); c.lineTo(gx + pw * .55, gy - H * .7); c.lineTo(gx + pw, gy); c.lineTo(gx - pw, gy); c.closePath(); c.fill();
+    g = c.createRadialGradient(gx, gy, 2, gx, gy, R * .7); g.addColorStop(0, `rgba(255,255,240,${pa})`); g.addColorStop(1, 'rgba(255,220,120,0)');
+    c.fillStyle = g; c.beginPath(); c.ellipse(gx, gy, R * .7, R * .26, 0, 0, TAU); c.fill();
+    c.restore();
+    // le héros
+    updateView(v, dt);
+    c.save(); c.translate(gx, gy); c.scale(s, s); v.x = 0; v.y = 0; const rim = RIM; RIM = '#ffe08a'; drawFighter(c, v, now); RIM = rim; c.restore();
+    // étincelles qui montent
+    if (!end && Math.random() < dt / 45) stars.push({ x: gx + (Math.random() - .5) * R * 2.2, y: gy - Math.random() * 150 * s, vy: -.03 - Math.random() * .05, r: (5 + Math.random() * 9) * s, life: 0, max: 900 + Math.random() * 700, ph: Math.random() * 6 });
+    c.save(); c.globalCompositeOperation = 'lighter';
+    for (let i = stars.length - 1; i >= 0; i--) {
+      const p = stars[i]; p.life += dt; p.y += p.vy * dt; if (p.life > p.max) { stars.splice(i, 1); continue; }
+      const q = p.life / p.max; c.globalAlpha = Math.sin(q * Math.PI) * (.6 + .4 * Math.sin(now / 80 + p.ph));
+      c.fillStyle = '#fff6d0'; star(c, p.x, p.y, p.r); c.fillStyle = '#ffd34a'; star(c, p.x, p.y, p.r * .55);
+    }
+    c.restore();
+    // titre
+    const ts = Math.min(W * .16, 70), tk = Math.min(1, t / 380), pop = tk < 1 ? 2 - Ease.outBack(tk) : 1, ty = H * .17;
+    c.save(); c.translate(W / 2, ty); c.scale(pop, pop); c.globalAlpha = tk;
+    fancyText(c, 'LEVEL UP!', 0, 0, ts, 'level', W - 24);
+    fancyText(c, to - from > 1 ? `Niveau ${from} → ${to}` : `Niveau ${to}`, 0, ts * .82, Math.round(ts * .42), 'white');
+    c.restore();
+    if (pts && t > 500) { c.save(); c.globalAlpha = Math.min(1, (t - 500) / 300); fancyText(c, `+${pts} points à répartir`, W / 2, gy + 52 * s, Math.round(Math.min(26, W * .06)), 'green'); c.restore(); }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
 }
 function xpBar() {
   const need = xpToNext(S.hero.level);
@@ -364,7 +430,7 @@ function runSummary(L, compact) {
    enregistrée AVANT de jouer : recharger la page en plein combat le résout en automatique (même tirage). */
 async function startFight() {
   Sfx.init(); Sfx.on = S.sound;
-  try { await Promise.all([document.fonts.load('20px "Permanent Marker"'), document.fonts.load('700 16px "Barlow Semi Condensed"')]); } catch (e) { /* police de secours */ }
+  try { await Promise.all([document.fonts.load('20px "Permanent Marker"'), document.fonts.load('20px "Lilita One"'), document.fonts.load('700 16px "Barlow Semi Condensed"')]); } catch (e) { /* police de secours */ }
   const floor = S.run.floor, en = enemyAt(floor), seed = (Math.random() * 2 ** 31) | 0, lo = curLoadout(floor);
   const heroEnt = JSON.parse(JSON.stringify(heroFor(floor))), heroEq = JSON.parse(JSON.stringify(S.equip)), pets = JSON.parse(JSON.stringify(myPets()));
   S.pendingFight = { floor, seed, lo }; save(); // recharger la page ne permet pas d'annuler une défaite
@@ -441,7 +507,7 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
   };
   const fp = new FightPlayer(canvas, {
     F, heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, floor, speed: S.speed, heroSprite: S.heroSprite !== false,
-    orbVal: Math.max(2, Math.round(xpReward(floor) * .06)),
+    orbVal: Math.max(2, Math.round(xpReward(floor) * .06)), xpWin: Math.round(xpReward(floor) * (1 + heroStats().xpBonus)),
     onHp: hp => { for (const k in hp) { if (!bars[k]) continue; if (k.length === 1) setHpb(bars[k], hp[k], U[k].max); else bars[k].firstChild.style.width = clamp(hp[k] / U[k].max, 0, 1) * 100 + '%'; } },
     onRage: F2 => {
       const r = F2.rage(); rageFill.style.width = r / RAGE.max * 100 + '%'; rageVal.textContent = `${r} / ${RAGE.max}`;
@@ -689,7 +755,7 @@ function tabBag() {
   // aperçu exact de « Tout optimiser » : simulé sur une copie de la partie
   let prev = null;
   if (upgrades().length || junk().length) { const snap = JSON.stringify(S); prev = optimizeAll(2); S = JSON.parse(snap); }
-  if (prev && (prev.eq || prev.sold)) sc.append(h('button', { class: 'btn btn-gold', onclick: () => { const r = optimizeAll(2); save(); Sfx.play(r.lv ? 'level' : 'xp'); toast(optText(r) || 'Déjà optimal'); render(); } },
+  if (prev && (prev.eq || prev.sold)) sc.append(h('button', { class: 'btn btn-gold', onclick: () => { const r = optimizeAll(2); save(); Sfx.play('xp'); toast(optText(r) || 'Déjà optimal'); render(); if (r.lv) setTimeout(() => showLevelUp(S.hero.level - r.lv, S.hero.level), 400); } },
     h('span', { class: 'col', style: { gap: '2px', alignItems: 'center' } }, 'Tout optimiser', h('small', { style: { fontFamily: 'var(--f-body)', fontSize: '12px' } }, optText(prev)))));
   if (S.run && S.run.loot.length) sc.append(h('div', { class: 'panel col' }, h('div', { class: 'row' }, icon('lock', 18), h('span', { class: 'label grow' }, `Butin du run · en jeu`)),
     h('div', { class: 'grid' }, S.run.loot.map(it => itemTile(it, { delta: deltaFor(it), onclick: () => openItem(it, null, true) })))));

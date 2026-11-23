@@ -5,6 +5,14 @@ Règle : chaque version livrée part en même temps sur la page de test Claude (
 ## Non publié (en cours)
 - (rien)
 
+## 0.8.1 — release publique (2026-11-23)
+Chiffres et level up façon jeu d'action.
+- Chiffres de dégâts : police ronde épaisse (Lilita One), dégradé vertical, gros contour brun et relief ; ils claquent en grand puis se posent
+- Couleur selon la part de vie retirée : blanc, or, orange, rouge ; critique et coup parfait en rouge flamboyant avec halo et étiquette « CRITIQUE » / « FRACAS » ; parade en bleu ; dégâts reçus par le héros en rouge rosé
+- Soins et XP en vert ; « +N XP » sort de l'adversaire vaincu à la victoire
+- Tous les textes de combat (ESQUIVE, BLOQUÉ, VICTOIRE…) passent au même style
+- LEVEL UP plein écran : le héros dans un cercle magique doré qui tourne, colonne de lumière, étincelles, « Niveau X » et points à répartir ; s'affiche en fin de run (encaissé ou tombé) et quand le démantèlement fait monter de niveau
+
 ## 0.8.0 — release publique (2026-11-23)
 Personnages peints pour tout le monde.
 - Création : choix entre trois combattants peints animés, Chevalier, Samouraï et MechBot (onglet Héros : changer de personnage, ou revenir au héros « Dessiné »)
