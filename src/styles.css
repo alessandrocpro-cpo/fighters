@@ -203,6 +203,19 @@ h1, h2, h3 { margin: 0; font-family: var(--f-display); font-weight: 400; letter-
 .ab .cost { position: absolute; left: 10px; bottom: 7px; display: inline-flex; align-items: center; gap: 3px; padding: 1px 9px; font-family: var(--f-ui); font-weight: 700; font-size: 14px; color: var(--text); background: rgba(18,19,29,.7); border-radius: 999px; }
 .ab em { position: absolute; bottom: 8px; right: 10px; font-style: normal; font-family: var(--f-ui); font-weight: 700; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; opacity: 0; }
 .ab.armed em { opacity: 1; }
+/* Retours des techniques : en attente (contour qui pulse), lancée (flash + saut), refusée (tremble) */
+.ab.armed { animation: armed .7s ease-in-out infinite alternate; }
+@keyframes armed { from { box-shadow: 0 0 0 3px var(--text); } to { box-shadow: 0 0 0 5px var(--text), 0 0 18px 4px rgba(255,255,255,.35); } }
+.ab.fired { animation: fired .6s cubic-bezier(.2,1.4,.4,1); }
+.ab.fired::after { content: "Lancée !"; position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--f-display); font-size: 22px; color: var(--on); background: #fff; border-radius: 14px; animation: firedTag .9s ease-out forwards; pointer-events: none; }
+@keyframes fired { 0% { transform: scale(1); } 30% { transform: scale(1.08) translateY(-6px); } 100% { transform: scale(1); } }
+@keyframes firedTag { 0%, 45% { opacity: 1; } 100% { opacity: 0; } }
+.nope { animation: nope .35s; }
+@keyframes nope { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+.rage.nope .rbar { box-shadow: 0 0 0 2px var(--coral); }
+.rage.nope .rl, .rage.nope .rv { color: var(--coral); }
+.rage.spent .rbar { animation: spent .6s ease-out; }
+@keyframes spent { 0% { box-shadow: 0 0 0 3px #fff, 0 0 16px 4px rgba(255,255,255,.6); } 100% { box-shadow: 0 0 0 0 transparent; } }
 .finfo { display: flex; align-items: center; gap: 10px; padding: 6px 6px 0; font-family: var(--f-ui); font-weight: 600; font-size: 14px; color: var(--muted); }
 .finfo .grow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .finfo .tw { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 16px; color: var(--text); padding-left: 12px; border-left: 1px solid var(--line); }

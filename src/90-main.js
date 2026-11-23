@@ -404,15 +404,21 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
   const rageFill = h('i'), rageVal = h('span', { class: 'rv num' }, `0 / ${RAGE.max}`), orbTag = h('span', { class: 'orbtag num' });
   /* Techniques emportées : boutons néon (cyan = défense / soin, rose = attaque) */
   const tbtns = {};
+  const rageBox = h('div', { class: 'rage' }, h('span', { class: 'rl' }, 'Rage'), h('div', { class: 'rbar' }, rageFill), rageVal, orbTag);
+  const pulse = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
   const abil = h('div', { class: 'abil n' + Math.max(1, Object.keys(F.actives).length) });
   for (const id of Object.keys(F.actives)) {
     const A = ACTIVES[id], rank = F.actives[id];
     const b = h('button', { class: 'ab ' + (CYAN_TECH.includes(id) ? 'def' : 'off'), 'aria-label': A.name, onclick: () => {
-      if (!F.canUse(id) || fp.queue.includes(id)) { Sfx.play('miss'); return; }
+      if (fp.queue.includes(id)) return;
+      if (!F.canUse(id)) { // refus visible : le bouton tremble et la jauge de rage clignote
+        Sfx.play('miss'); pulse(b, 'nope'); pulse(rageBox, 'nope');
+        return;
+      }
       fp.queueActive(id); b.classList.add('armed'); Sfx.play('tap');
     } }, h('span', { class: 'abic' }, icon('t_' + id, 34)),
       h('span', { class: 'abtx' }, h('b', null, A.name), h('small', null, A.short(rank))),
-      h('span', { class: 'cost num' }, icon('bolt', 18), A.cost), h('em', null, 'Lancé'));
+      h('span', { class: 'cost num' }, icon('bolt', 18), A.cost), h('em', null, 'Au prochain tour'));
     tbtns[id] = b; abil.append(b);
   }
   if (!abil.children.length) abil.append(h('div', { class: 'notech' }, 'Aucune technique emportée. Apprends-en dans Héros.'));
@@ -422,7 +428,7 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
     h('div', { class: 'fhud' }, side('L', heroEnt, heroEq), h('div', { class: 'fl' }, h('span', null, 'Étage'), h('b', { class: 'num' }, floor)), side('R', en, en.equip), pauseBtn),
     banner,
     h('div', { class: 'fbottom' },
-      h('div', { class: 'rage' }, h('span', { class: 'rl' }, 'Rage'), h('div', { class: 'rbar' }, rageFill), rageVal, orbTag),
+      rageBox,
       abil,
       h('div', { class: 'finfo' }, icon('info', 22), h('span', { class: 'grow' }, floorHint(floor)), h('span', { class: 'tw num' }, icon('tower', 22), `${inTier} / 10`))));
   app.append(root);
@@ -441,6 +447,11 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
       const r = F2.rage(); rageFill.style.width = r / RAGE.max * 100 + '%'; rageVal.textContent = `${r} / ${RAGE.max}`;
       for (const id in tbtns) { const b = tbtns[id], q = fp.queue.includes(id); b.classList.toggle('ready', F2.canUse(id) || q); b.classList.toggle('armed', q); }
     },
+    onActive: id => { // technique partie : le bouton s'illumine, la jauge se vide en flash
+      const b = tbtns[id]; if (b) { b.classList.remove('armed'); pulse(b, 'fired'); }
+      pulse(rageBox, 'spent');
+    },
+    onCallout: () => { clearTimeout(bannerT); banner.classList.remove('on'); banner.innerHTML = ''; }, // le gros titre du canvas prime sur la bannière
     onOrb: x => { orbTag.textContent = `+${x} XP`; },
     hint: () => (S.tips.qteN || 0) < 4,
     onQteStart: (kind, n) => {
@@ -449,7 +460,6 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
     },
     onQte: (kind, ok, streak) => {
       if (ok) S.tips.qteN = (S.tips.qteN || 0) + 1;
-      if (kind === 'perfect' && ok && streak >= 2) showBanner('Coup parfait', 'Série en cours', streak, 1100);
     },
   });
   window.__fp = fp;

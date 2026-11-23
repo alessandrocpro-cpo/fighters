@@ -5,6 +5,7 @@
 const INK = '#22162e';
 let RIM = '#c9b8ff'; // couleur du contre-jour, réglée par l'arène selon le palier
 const _rgb = h => { h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; };
+const hexA = (h, a) => `rgba(${_rgb(h).join(',')},${a})`;
 function mix(a, b, t) { const A = _rgb(a), B = _rgb(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); }
 const _sc = {}, _lc = {};
 const shadeOf = c => _sc[c] || (_sc[c] = mix(c, '#1d1132', .4));

@@ -5,6 +5,16 @@ Règle : on développe en continu (dépôt GitHub + page de test Claude). Une **
 ## Non publié (en cours)
 - (rien)
 
+## 0.7.1 — release publique (2026-11-23)
+Les moments forts du combat se voient et se comprennent.
+- Coup parfait, parade, coup dévastateur : arrêt sur image, coup de zoom, flash d'écran et gros titre centré qui dit l'effet (« Dégâts ×1,5 », « Dégâts réduits de 70 % »), avec la série de coups parfaits
+- Parade : arc de bouclier lumineux devant le héros dès le tap, dégâts affichés en bleu ; le blocage naturel s'appelle désormais « Bloqué » pour ne plus être confondu avec ta parade
+- Réflexe manqué : « Raté », « Pas paré » ou « Trop tôt » en rouge
+- Techniques : colonne de lumière, double onde, titre centré avec ce que fait la technique (« Prochain coup ×2,2, inesquivable », « −65 % sur les 2 prochains coups »…), effet visible sur la cible
+- Bouton de technique : « Au prochain tour » en attente (contour qui pulse), « Lancée ! » au déclenchement avec flash de la jauge de rage ; rage insuffisante : le bouton tremble et la jauge passe en rouge
+- Pastilles d'état au-dessus des têtes : Bouclier ×2, Dévastateur prêt, Brise-armure ×3, Étourdi, Affaibli
+- Bouclier qui encaisse : « Bouclier : encore 1 » / « Bouclier épuisé »
+
 ## 0.7.0 — release publique (2026-11-23)
 Combattants redessinés, plus proches d'une illustration anime peinte.
 - Silhouette plus élancée (tête ~1/3 du corps), plus grands à l'écran, garde de boxe au repos
