@@ -3,6 +3,10 @@
 Règle : chaque version livrée part en même temps sur la page de test Claude (artefact) et sur GitHub : push sur `main` et `release` (GitHub Pages), plus un tag git `vX.Y.Z`. Chaque version incrémente `GAME_VERSION` (src/00-core.js) et ajoute une entrée ici.
 
 ## Non publié (en cours)
+Techniques automatiques expliquées (poussé sur `main` sous le nom « 0.9.1 », jamais publié : la version affichée reste 0.9.0).
+- Tutoriel : la carte « Technique prête » prévient qu'à 100 de rage les techniques partent toutes seules ; nouvelle carte « Lancement automatique » la première fois que ça arrive
+- Options : « Techniques auto à rage pleine : oui / non »
+
 Tablette (iPad) et grand écran, en portrait comme en paysage.
 - L'app prend tout l'écran au-delà de 700 × 560 px (avant : colonne de 480 px au centre). Un téléphone, même en paysage, garde la colonne mobile
 - Portrait : contenu en colonne centrée élargie (720 px), portraits, aperçu de création et grilles agrandis (sac et collection en colonnes auto)
