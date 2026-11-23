@@ -835,7 +835,7 @@ class FightPlayer {
       // techniques demandées par le joueur (ou automatiques si la rage déborde)
       let acts = [];
       while (this.queue.length) { const ev = F.useActive(this.queue.shift()); if (ev) acts.push(...ev); }
-      if (!acts.length && F.rage() >= RAGE.max) acts = F.autoActives();
+      if (!acts.length && this.o.autoTech !== false && F.rage() >= RAGE.max) { acts = F.autoActives(); if (acts.length) this.o.onAutoTech && this.o.onAutoTech(); }
       for (const e of acts) await this.playEvent(e);
       if (acts.length) this.sync();
       if (F.over) break;

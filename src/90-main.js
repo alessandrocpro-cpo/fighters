@@ -303,6 +303,7 @@ function openOptions() {
     h('button', { class: 'btn btn-stone', onclick: () => { S.sound = !S.sound; Sfx.on = S.sound; save(); close(); openOptions(); } }, icon(S.sound ? 'sound' : 'mute', 20), S.sound ? 'Bruitages : oui' : 'Bruitages : non'),
     h('button', { class: 'btn btn-stone', onclick: () => { S.autoEquip = S.autoEquip === false; save(); close(); openOptions(); } }, S.autoEquip !== false ? 'Équiper le meilleur après un run : oui' : 'Équiper le meilleur après un run : non'),
     h('button', { class: 'btn btn-stone', onclick: () => { S.autoSell = S.autoSell === false; save(); close(); openOptions(); } }, S.autoSell !== false ? 'Démanteler l\'inutile (commun, peu commun) : oui' : 'Démanteler l\'inutile (commun, peu commun) : non'),
+    h('button', { class: 'btn btn-stone', onclick: () => { S.autoTech = S.autoTech === false; save(); close(); openOptions(); } }, S.autoTech !== false ? 'Techniques auto à rage pleine : oui' : 'Techniques auto à rage pleine : non'),
     h('button', { class: 'btn btn-stone', onclick: () => { S.autoAlloc = !S.autoAlloc; save(); close(); openOptions(); } }, S.autoAlloc ? 'Répartir les points tout seul : oui' : 'Répartir les points tout seul : non'),
     h('div', { class: 'row' }, h('button', { class: 'btn btn-sm btn-stone grow', onclick: () => { close(); openSaveIO(); } }, 'Sauvegarde'), h('button', { class: 'btn btn-sm btn-blood grow', onclick: () => { close(); confirmReset(); } }, 'Recommencer')),
     h('div', { class: 'label', style: { textAlign: 'center' } }, `Climbrawl v${GAME_VERSION}`),
@@ -332,7 +333,8 @@ const COACH = {
   welcome: { ic: 'tower', t: 'Bienvenue dans la Tour', x: ['Chaque étage cache un adversaire : bats-le pour monter.', 'Tes victoires rapportent de l\'XP et du butin pour renforcer ton héros.'] },
   tap: { ic: 'epee', t: 'Coup parfait', x: ['Quand le cercle doré se referme sur l\'adversaire, tape l\'écran.', 'Au bon moment : dégâts ×1,5. Trop tôt ou trop tard : coup normal.'], cta: 'À moi !' },
   parry: { ic: 'shield', t: 'Coup dangereux « ! »', x: ['Le cercle devient bleu : tape quand il se referme sur toi.', 'Parade réussie : dégâts réduits de 70 %.'], cta: 'Je pare' },
-  rage: { ic: 't_devaste', t: 'Technique prête', x: ['Ta rage monte quand tu frappes et quand tu encaisses.', 'Elle suffit : touche ta technique en bas de l\'écran pour la lancer.'] },
+  rage: { ic: 't_devaste', t: 'Technique prête', x: ['Ta rage monte quand tu frappes et quand tu encaisses. Elle suffit : touche ta technique en bas de l\'écran.', 'Si tu la laisses monter à 100, tes techniques partent toutes seules. Tu peux couper ça dans les options (engrenage).'] },
+  autotech: { ic: 'bolt', t: 'Lancement automatique', x: ['Ta rage était à 100 : le jeu a lancé ta technique pour ne pas la gaspiller.', 'Tu préfères tout décider ? Options (engrenage) → « Techniques auto à rage pleine : non ».'] },
   stake: { ic: 'lock', t: 'Continuer ou encaisser', x: ['Continuer : étage suivant, plus d\'XP et de butin, plus de danger.', 'Encaisser : tu gardes tout. Si tu tombes, tu perds le butin du run et la moitié de l\'XP.'] },
   death: { ic: 'heart', t: 'Ce n\'est qu\'un début', x: ['Tu gardes la moitié de l\'XP du run.', 'Répartis tes points, équipe-toi, et retente : chaque run te rend plus fort.'] },
   points: { ic: 'hero', t: 'Points à répartir', x: ['Chaque niveau donne 3 points : Force, Agilité, Vitesse, Vitalité.', 'Onglet Héros : place-les toi-même ou touche « Répartir auto ».'] },
@@ -346,7 +348,7 @@ const coachDone = k => !S || (S.tuto && (S.tuto.off || S.tuto[k]));
 function coach(key) {
   return new Promise(done => {
     if (coachDone(key) || _coachOpen) return done(false);
-    S.tuto = S.tuto || {}; S.tuto[key] = 1; save(); _coachOpen = true;
+    S.tuto = S.tuto || {}; S.tuto[key] = 1; if (key === 'rage') S.tuto.autotech = 1; save(); _coachOpen = true;
     const C = COACH[key], n = Object.keys(S.tuto).filter(k => COACH[k]).length, inFight = !!document.querySelector('.fight');
     const fin = () => { _coachOpen = false; done(true); if (!inFight) setTimeout(() => coachMenu(0), 500); };
     overlay(close => [
@@ -557,7 +559,8 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
     clearTimeout(bannerT); bannerT = setTimeout(() => banner.classList.remove('on'), ms || 1400);
   };
   const fp = new FightPlayer(canvas, {
-    F, heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, floor, speed: S.speed, heroSprite: S.heroSprite !== false,
+    F, heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, floor, speed: S.speed, heroSprite: S.heroSprite !== false, autoTech: S.autoTech !== false,
+    onAutoTech: () => { if (!coachDone('autotech')) { fp.togglePause(true); coach('autotech').then(() => fp.togglePause(false)); } },
     orbVal: Math.max(2, Math.round(xpReward(floor) * .06)), xpWin: Math.round(xpReward(floor) * (1 + heroStats().xpBonus)),
     onHp: hp => { for (const k in hp) { if (!bars[k]) continue; if (k.length === 1) setHpb(bars[k], hp[k], U[k].max); else bars[k].firstChild.style.width = clamp(hp[k] / U[k].max, 0, 1) * 100 + '%'; } },
     onRage: F2 => {
