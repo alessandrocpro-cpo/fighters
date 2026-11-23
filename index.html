@@ -29,6 +29,7 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; } /* iOS : pas de texte grossi en paysage */
 body { margin: 0; touch-action: manipulation; background: var(--bg); color: var(--text); font-family: var(--f-body); font-weight: 500; font-size: 15px; overflow: hidden; user-select: none; -webkit-user-select: none; }
 body::before { content: ""; position: fixed; inset: -12px; pointer-events: none; background: var(--bd) center 28% / cover no-repeat, var(--bg); filter: blur(4px) brightness(.42) saturate(.55); }
 body::after { content: ""; position: fixed; inset: 0; pointer-events: none; background: rgba(24,26,40,.45); }
@@ -390,6 +391,119 @@ h1, h2, h3 { margin: 0; font-family: var(--f-display); font-weight: 400; letter-
 .ov.coach-top .coach-ic { width: 48px; height: 48px; }
 .ov.coach-top .coach h2 { font-size: 22px; }
 
+/* ---------- Tablette et grand écran (iPad portrait et paysage, ordinateur) ----------
+   Seuil : 700 px de large ET 560 px de haut (un téléphone en paysage garde la colonne mobile).
+   Portrait : l'app occupe tout l'écran, contenu en colonne centrée élargie.
+   Paysage : nav en rail à gauche, Héros et Sac sur 2 colonnes (.duo / .half), fenêtres centrées.
+   Le combat prend tout l'écran ; le cadrage paysage est géré par le canvas (70-arena, VIEW_H). */
+@supports (height: 100dvh) { html, body { height: 100dvh; } }
+@media (min-width: 700px) and (min-height: 560px) {
+  #app { max-width: none; box-shadow: none; }
+  .scroll { padding-left: max(20px, env(safe-area-inset-left, 0px), calc((100% - 720px) / 2)); padding-right: max(20px, env(safe-area-inset-right, 0px), calc((100% - 720px) / 2)); padding-top: 18px; gap: 14px; }
+  .top { padding-left: max(20px, env(safe-area-inset-left, 0px), calc((100% - 720px) / 2)); padding-right: max(20px, env(safe-area-inset-right, 0px), calc((100% - 720px) / 2)); }
+  .nav { padding-left: max(20px, calc((100% - 560px) / 2)); padding-right: max(20px, calc((100% - 560px) / 2)); }
+  .nav button { font-size: 15px; padding: 8px 0; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+  .codex { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+  .foe { grid-template-columns: 150px 1fr; }
+  .foe canvas { width: 150px; height: 188px; }
+  .hero-card { grid-template-columns: 170px 1fr; }
+  .hero-card canvas { width: 170px; height: 230px; }
+  .create-prev { height: 300px; }
+  .charprev { height: 150px; }
+  .logo h1 { font-size: 64px; }
+  /* fenêtres : bas d'écran centré, largeur de lecture */
+  .sheet { max-width: 560px; border-radius: 22px 22px 0 0; }
+  .ov.center .sheet { max-width: 520px; }
+  .ov.coach-top .sheet { max-width: 560px; }
+  /* combat : HUD et commandes centrés, l'arène reste plein écran */
+  .fhud { max-width: 860px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+  .fside { grid-template-columns: 60px 1fr; }
+  .fside.R { grid-template-columns: 1fr 60px; }
+  .pframe { width: 60px; height: 60px; }
+  .hpb { height: 20px; }
+  .pausebtn { right: 16px; }
+  .fbottom { left: 50%; right: auto; width: min(100%, 760px); transform: translateX(-50%); padding-left: 14px; padding-right: 14px; }
+}
+/* Paysage large : rail de navigation à gauche et 2 colonnes */
+@media (min-width: 900px) and (min-height: 560px) and (orientation: landscape) {
+  #app:has(> .nav) { display: grid; grid-template-columns: 104px 1fr; grid-template-rows: auto 1fr; }
+  #app:has(> .nav) > .top { grid-column: 2; grid-row: 1; }
+  #app:has(> .nav) > .scroll { grid-column: 2; grid-row: 2; min-height: 0; }
+  #app:has(> .nav) > .nav { grid-column: 1; grid-row: 1 / 3; grid-template-columns: 1fr; align-content: center; gap: 10px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 10px calc(12px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); }
+  #app:has(> .nav) > .nav button { padding: 14px 0 12px; gap: 4px; }
+  #app:has(> .nav) > .nav .badge { right: 14px; }
+  #app:has(> .nav) > .top, #app:has(> .nav) > .scroll.duo { --w: 1040px; }
+  #app:has(> .nav) > .scroll:not(.duo) { --w: 760px; }
+  .top { padding-left: max(20px, calc((100% - var(--w, 720px)) / 2)); padding-right: max(20px, env(safe-area-inset-right, 0px), calc((100% - var(--w, 720px)) / 2)); }
+  .scroll { padding-left: max(20px, calc((100% - var(--w, 720px)) / 2)); padding-right: max(20px, env(safe-area-inset-right, 0px), calc((100% - var(--w, 720px)) / 2)); }
+  .scroll.duo { display: grid; grid-template-columns: 1fr 1fr; align-content: start; align-items: start; grid-auto-flow: row dense; }
+  .scroll.duo > * { grid-column: 1 / -1; }
+  .scroll.duo > .half { grid-column: auto; }
+  .ov .sheet { max-height: 94%; }
+}
+
+/* ---------- Téléphone en paysage (iPhone tourné) ----------
+   Peu de hauteur : l'app prend toute la largeur, nav en rail à gauche, barres compactes.
+   Combat : HUD resserré en haut, commandes en une seule bande basse (rage à gauche, techniques à droite). */
+@media (orientation: landscape) and (max-height: 559px) and (min-width: 560px) {
+  #app { max-width: none; box-shadow: none; }
+  #app:has(> .nav) { display: grid; grid-template-columns: calc(78px + env(safe-area-inset-left, 0px)) 1fr; grid-template-rows: auto 1fr; }
+  #app:has(> .nav) > .top { grid-column: 2; grid-row: 1; }
+  #app:has(> .nav) > .scroll { grid-column: 2; grid-row: 2; min-height: 0; }
+  #app:has(> .nav) > .nav { grid-column: 1; grid-row: 1 / 3; grid-template-columns: 1fr; align-content: center; gap: 4px;
+    padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px)); }
+  #app:has(> .nav) > .nav button { padding: 8px 0 7px; font-size: 13px; }
+  #app:has(> .nav) > .nav .badge { right: 6px; }
+  .top { padding: calc(6px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px), calc((100% - 760px) / 2)) 6px max(16px, calc((100% - 760px) / 2)); }
+  .top .avatar { width: 38px; height: 38px; border-radius: 10px; }
+  .top .name { font-size: 17px; }
+  .scroll { padding: 10px max(16px, env(safe-area-inset-right, 0px), calc((100% - 760px) / 2)) 14px max(16px, env(safe-area-inset-left, 0px), calc((100% - 760px) / 2)); }
+  #app:has(> .nav) > .scroll { padding-left: max(16px, calc((100% - 760px) / 2)); }
+  .scroll.duo { display: grid; grid-template-columns: 1fr 1fr; align-content: start; align-items: start; grid-auto-flow: row dense; }
+  .scroll.duo > * { grid-column: 1 / -1; }
+  .scroll.duo > .half { grid-column: auto; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+  .codex { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
+  .create-prev { height: 170px; }
+  .logo h1 { font-size: 40px; }
+  .sheet { max-width: 560px; max-height: 96%; }
+  .ov.center .sheet { max-width: 500px; }
+  .ov.coach-top .sheet { max-width: 520px; margin-top: calc(8px + env(safe-area-inset-top, 0px)); }
+  .toast { top: calc(56px + env(safe-area-inset-top, 0px)); }
+  /* combat */
+  .fhud { max-width: 720px; margin: 0 auto; grid-template-columns: 1fr 48px 1fr; padding: calc(6px + env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px)); }
+  .fside { grid-template-columns: 40px 1fr; padding: 4px; border-radius: 12px; }
+  .fside.R { grid-template-columns: 1fr 40px; }
+  .pframe { width: 40px; height: 40px; border-radius: 9px; }
+  .pframe .pc { border-radius: 7px; }
+  .fside .nm { font-size: 14px; margin-bottom: 2px; }
+  .hpb { height: 14px; }
+  .fl { width: 48px; height: 48px; border-radius: 12px; }
+  .fl b { font-size: 20px; }
+  .pausebtn { top: calc(6px + env(safe-area-inset-top, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); width: 40px; height: 40px; }
+  .fhud { padding-right: max(56px, calc(env(safe-area-inset-right, 0px) + 50px)); }
+  .fbanner { top: 22%; }
+  .fbanner h2 { font-size: 30px; }
+  .fbottom { flex-direction: row; align-items: center; gap: 12px; border-radius: 16px 16px 0 0;
+    padding: 6px max(10px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); }
+  .fbottom .rage { flex: 0 0 clamp(170px, 30%, 260px); grid-template-columns: auto 1fr auto; row-gap: 2px; }
+  .fbottom .rage .orbtag { grid-column: 1 / -1; font-size: 12px; }
+  .fbottom .abil { flex: 1; min-width: 0; }
+  .fbottom .finfo { display: none; }
+  .ab, .abil.n3 .ab { min-height: 50px; padding: 6px 64px 6px 10px; grid-template-columns: 28px 1fr; justify-items: start; text-align: left; gap: 6px; }
+  .abil.n3 .ab { padding-right: 10px; grid-template-columns: 1fr; padding-bottom: 26px; }
+  .ab .cost { left: auto; right: 8px; bottom: auto; top: 50%; transform: translateY(-50%); }
+  .abil.n3 .ab .cost { left: 8px; right: auto; top: auto; bottom: 4px; transform: none; font-size: 12px; }
+  .abil.n3 .abic { display: none; }
+  .abtx b { font-size: 15px; }
+  .abtx small { font-size: 12px; }
+  .ab em { display: none; }
+  .notech { padding: 8px; }
+  .lvtap { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+}
+
 </style>
 </head>
 <body>
@@ -397,7 +511,7 @@ h1, h2, h3 { margin: 0; font-family: var(--f-display); font-weight: 400; letter-
 <script>
 /* ---- 00-core.js ---- */
 'use strict';
-const GAME_VERSION = '0.9.0'; // incrémenté à chaque release (voir CHANGELOG.md)
+const GAME_VERSION = '0.9.1'; // incrémenté à chaque release (voir CHANGELOG.md)
 /* ===== CORE : utilitaires partagés (logique + rendu) ===== */
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -1869,6 +1983,7 @@ function previewLoop(t) {
 
 /* ---- 70-arena.js ---- */
 /* ===== ARÈNE : un monde gothique par palier, effets, lecteur de combat interactif ===== */
+const VIEW_H = 430, VIEW_H_LOW = 315; // hauteur de monde visible en paysage (combattants bien lisibles sans rogner le sol)
 const AW = 400, AH = 280, GROUND = 238, EXT = 440, BOT = 300, FLOOR_BACK = 192, LEDGE = 292;
 const tierIdx = floor => Math.min(TIERS.length - 1, Math.floor((floor - 1) / 10));
 const tierOf = floor => TIERS[tierIdx(floor)];
@@ -2349,9 +2464,12 @@ class FightPlayer {
     if (!w || !h) return;
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
     const c = cv.getContext('2d'), T = this.tier;
-    const cw = cv.width, ch = cv.height, gr = this.o.groundAt || .64;
-    /* cadrage portrait plein écran : 82% de la largeur du monde, sol à ~64% de la hauteur */
-    let s = Math.max(cw / (AW * .82), gr * ch / (GROUND + EXT - 20), (1 - gr) * ch / (AH + BOT - GROUND - 10));
+    // téléphone en paysage (écran bas) : zoom plus serré et sol plus bas, juste au-dessus de la bande de commandes
+    const low = w > h && h < 560, vh = low ? VIEW_H_LOW : VIEW_H;
+    const cw = cv.width, ch = cv.height, gr = this.o.groundAt || (low ? .77 : .64);
+    /* cadrage plein écran : en portrait, 82% de la largeur du monde ; en paysage (tablette, ordinateur),
+       la hauteur prime (~VIEW_H unités visibles) et le décor est prolongé en miroir sur les côtés. Sol à ~64% de la hauteur */
+    let s = Math.max(Math.min(cw / (AW * .82), ch / vh), gr * ch / (GROUND + EXT - 20), (1 - gr) * ch / (AH + BOT - GROUND - 10));
     let ox = (cw - AW * s) / 2, oy = ch * gr - GROUND * s;
     // coup de zoom sur l'impact (tenu pendant l'arrêt sur image, puis relâché)
     if (this.zoom > .002) { const [fx, fy] = this.zf, px = ox + fx * s, py = oy + fy * s; s *= 1 + this.zoom; ox = px - fx * s; oy = py - fy * s; }
@@ -2363,13 +2481,22 @@ class FightPlayer {
     this.tf = [s, ox + sx * s, oy + sy * s];
     c.setTransform(s, 0, 0, s, this.tf[1], this.tf[2]);
     const lay = arenaLayers(this.o.floor, Math.max(1, Math.round(s)));
-    c.drawImage(lay.back, -4, -EXT - 4, AW + 8, AH + EXT + BOT + 8);
+    // bande visible du monde : au-delà de [0, AW], copies du décor en miroir (raccord invisible)
+    const xl = -this.tf[1] / s, xr = (cw - this.tf[1]) / s, wings = [];
+    for (let k = 1; xl < -k * AW + AW || xr > k * AW; k++) wings.push(-k, k);
+    const layer = img => {
+      c.drawImage(img, -4, -EXT - 4, AW + 8, AH + EXT + BOT + 8);
+      for (const k of wings) { c.save(); c.translate(k * AW + (k % 2 ? AW : 0), 0); if (k % 2) c.scale(-1, 1); c.drawImage(img, -4, -EXT - 4, AW + 8, AH + EXT + BOT + 8); c.restore(); }
+    };
+    layer(lay.back);
+    const sl = Math.min(-60, xl - 60), sr = Math.max(AW + 60, xr + 60);
     for (const sh of this.ships) {
-      sh.x += sh.v * dt; if (sh.x > AW + 60) sh.x = -60; if (sh.x < -60) sh.x = AW + 60;
+      sh.x += sh.v * dt; if (sh.x > sr) sh.x = sl; if (sh.x < sl) sh.x = sr;
       drawShip(c, sh.x, sh.y + Math.sin(now / 1400 + sh.s * 9) * 3, sh.s, mix(T.far, '#000000', .25 - sh.s * .1), T.glow, sh.v > 0 ? 1 : -1);
     }
-    c.drawImage(lay.front, -4, -EXT - 4, AW + 8, AH + EXT + BOT + 8);
+    layer(lay.front);
     this.drawMotes(c, now, dt);
+    for (const k of wings) { c.save(); c.translate(k * AW, 0); this.drawMotes(c, now, 0); c.restore(); }
     RIM = T.rim;
     // auras : bouclier (cyan) et coup dévastateur chargé (rose), derrière le héros
     const hv = this.v.L, U = this.F && this.F.U;
@@ -2705,7 +2832,7 @@ class FightPlayer {
       // techniques demandées par le joueur (ou automatiques si la rage déborde)
       let acts = [];
       while (this.queue.length) { const ev = F.useActive(this.queue.shift()); if (ev) acts.push(...ev); }
-      if (!acts.length && F.rage() >= RAGE.max) acts = F.autoActives();
+      if (!acts.length && this.o.autoTech !== false && F.rage() >= RAGE.max) { acts = F.autoActives(); if (acts.length) this.o.onAutoTech && this.o.onAutoTech(); }
       for (const e of acts) await this.playEvent(e);
       if (acts.length) this.sync();
       if (F.over) break;
@@ -3504,6 +3631,7 @@ function openOptions() {
     h('button', { class: 'btn btn-stone', onclick: () => { S.sound = !S.sound; Sfx.on = S.sound; save(); close(); openOptions(); } }, icon(S.sound ? 'sound' : 'mute', 20), S.sound ? 'Bruitages : oui' : 'Bruitages : non'),
     h('button', { class: 'btn btn-stone', onclick: () => { S.autoEquip = S.autoEquip === false; save(); close(); openOptions(); } }, S.autoEquip !== false ? 'Équiper le meilleur après un run : oui' : 'Équiper le meilleur après un run : non'),
     h('button', { class: 'btn btn-stone', onclick: () => { S.autoSell = S.autoSell === false; save(); close(); openOptions(); } }, S.autoSell !== false ? 'Démanteler l\'inutile (commun, peu commun) : oui' : 'Démanteler l\'inutile (commun, peu commun) : non'),
+    h('button', { class: 'btn btn-stone', onclick: () => { S.autoTech = S.autoTech === false; save(); close(); openOptions(); } }, S.autoTech !== false ? 'Techniques auto à rage pleine : oui' : 'Techniques auto à rage pleine : non'),
     h('button', { class: 'btn btn-stone', onclick: () => { S.autoAlloc = !S.autoAlloc; save(); close(); openOptions(); } }, S.autoAlloc ? 'Répartir les points tout seul : oui' : 'Répartir les points tout seul : non'),
     h('div', { class: 'row' }, h('button', { class: 'btn btn-sm btn-stone grow', onclick: () => { close(); openSaveIO(); } }, 'Sauvegarde'), h('button', { class: 'btn btn-sm btn-blood grow', onclick: () => { close(); confirmReset(); } }, 'Recommencer')),
     h('div', { class: 'label', style: { textAlign: 'center' } }, `Climbrawl v${GAME_VERSION}`),
@@ -3530,10 +3658,11 @@ function pickTip() {
 }
 /* ---------- Tutoriel progressif : une carte par notion, au moment où le joueur la découvre ---------- */
 const COACH = {
-  welcome: { ic: 'tower', t: 'Bienvenue dans la Tour', x: ['Chaque étage cache un adversaire : bats-le pour monter.', 'Tes victoires rapportent de l\'XP et du butin pour renforcer ton héros.'] },
+  welcome: { ic: 'tower', t: 'Bienvenue dans la Tour', x: ['Chaque étage cache un adversaire : bats-le pour monter.', 'Tes victoires rapportent de l\'XP et du butin pour renforcer ton héros.', 'Portrait ou paysage : tourne simplement ton téléphone ou ta tablette, le jeu s\'adapte.'] },
   tap: { ic: 'epee', t: 'Coup parfait', x: ['Quand le cercle doré se referme sur l\'adversaire, tape l\'écran.', 'Au bon moment : dégâts ×1,5. Trop tôt ou trop tard : coup normal.'], cta: 'À moi !' },
   parry: { ic: 'shield', t: 'Coup dangereux « ! »', x: ['Le cercle devient bleu : tape quand il se referme sur toi.', 'Parade réussie : dégâts réduits de 70 %.'], cta: 'Je pare' },
-  rage: { ic: 't_devaste', t: 'Technique prête', x: ['Ta rage monte quand tu frappes et quand tu encaisses.', 'Elle suffit : touche ta technique en bas de l\'écran pour la lancer.'] },
+  rage: { ic: 't_devaste', t: 'Technique prête', x: ['Ta rage monte quand tu frappes et quand tu encaisses. Elle suffit : touche ta technique en bas de l\'écran.', 'Si tu la laisses monter à 100, tes techniques partent toutes seules. Tu peux couper ça dans les options (engrenage).'] },
+  autotech: { ic: 'bolt', t: 'Lancement automatique', x: ['Ta rage était à 100 : le jeu a lancé ta technique pour ne pas la gaspiller.', 'Tu préfères tout décider ? Options (engrenage) → « Techniques auto à rage pleine : non ».'] },
   stake: { ic: 'lock', t: 'Continuer ou encaisser', x: ['Continuer : étage suivant, plus d\'XP et de butin, plus de danger.', 'Encaisser : tu gardes tout. Si tu tombes, tu perds le butin du run et la moitié de l\'XP.'] },
   death: { ic: 'heart', t: 'Ce n\'est qu\'un début', x: ['Tu gardes la moitié de l\'XP du run.', 'Répartis tes points, équipe-toi, et retente : chaque run te rend plus fort.'] },
   points: { ic: 'hero', t: 'Points à répartir', x: ['Chaque niveau donne 3 points : Force, Agilité, Vitesse, Vitalité.', 'Onglet Héros : place-les toi-même ou touche « Répartir auto ».'] },
@@ -3547,7 +3676,7 @@ const coachDone = k => !S || (S.tuto && (S.tuto.off || S.tuto[k]));
 function coach(key) {
   return new Promise(done => {
     if (coachDone(key) || _coachOpen) return done(false);
-    S.tuto = S.tuto || {}; S.tuto[key] = 1; save(); _coachOpen = true;
+    S.tuto = S.tuto || {}; S.tuto[key] = 1; if (key === 'rage') S.tuto.autotech = 1; save(); _coachOpen = true;
     const C = COACH[key], n = Object.keys(S.tuto).filter(k => COACH[k]).length, inFight = !!document.querySelector('.fight');
     const fin = () => { _coachOpen = false; done(true); if (!inFight) setTimeout(() => coachMenu(0), 500); };
     overlay(close => [
@@ -3758,7 +3887,8 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
     clearTimeout(bannerT); bannerT = setTimeout(() => banner.classList.remove('on'), ms || 1400);
   };
   const fp = new FightPlayer(canvas, {
-    F, heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, floor, speed: S.speed, heroSprite: S.heroSprite !== false,
+    F, heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, floor, speed: S.speed, heroSprite: S.heroSprite !== false, autoTech: S.autoTech !== false,
+    onAutoTech: () => { if (!coachDone('autotech')) { fp.togglePause(true); coach('autotech').then(() => fp.togglePause(false)); } },
     orbVal: Math.max(2, Math.round(xpReward(floor) * .06)), xpWin: Math.round(xpReward(floor) * (1 + heroStats().xpBonus)),
     onHp: hp => { for (const k in hp) { if (!bars[k]) continue; if (k.length === 1) setHpb(bars[k], hp[k], U[k].max); else bars[k].firstChild.style.width = clamp(hp[k] / U[k].max, 0, 1) * 100 + '%'; } },
     onRage: F2 => {
@@ -3869,7 +3999,8 @@ function tabHero() {
   const used = STAT_KEYS.reduce((a, k) => a + alloc[k], 0), left = S.hero.points - used;
   const preview = { ...S.hero, base: { ...S.hero.base } }; for (const k of STAT_KEYS) preview.base[k] += alloc[k];
   const st0 = heroStats(), st = computeStats(preview, S.equip);
-  sc.append(h('div', { class: 'panel' },
+  sc.classList.add('duo'); // tablette paysage : panneaux sur 2 colonnes
+  sc.append(h('div', { class: 'panel half' },
     h('div', { class: 'hero-card' },
       fullPreview(S.hero, S.equip, 1, '', 1.1, true),
       h('div', { class: 'col', style: { gap: '4px', minWidth: 0 } },
@@ -3897,7 +4028,7 @@ function tabHero() {
       h('span', { class: 'val num' }, S.hero.base[k] + alloc[k], gear ? h('small', null, ` +${gear}`) : null, alloc[k] ? h('em', null, ` (+${alloc[k]})`) : null),
       h('button', { class: 'pm plus', 'aria-label': 'Ajouter', disabled: left <= 0, onclick: () => { alloc[k]++; Sfx.play('tap'); render(); } }, icon('plus', 18))));
   }
-  sc.append(h('div', { class: 'panel col' },
+  sc.append(h('div', { class: 'panel col half' },
     h('div', { class: 'row' }, h('span', { class: 'label grow' }, 'Statistiques'), h('span', { class: 'chip' + (left ? ' hot' : '') }, `${left} point${left > 1 ? 's' : ''} libre${left > 1 ? 's' : ''}`)),
     rows,
     S.hero.points ? h('div', { class: 'row' },
@@ -3906,7 +4037,7 @@ function tabHero() {
       used ? h('button', { class: 'btn btn-sm btn-gold grow', onclick: commitAlloc }, `Valider ${used} point${used > 1 ? 's' : ''}`) : null) : null));
   const d = (k, a, b, f) => h('div', null, h('span', null, k), h('b', { class: 'num' }, f(b), a !== b ? h('small', { class: b > a ? 'delta-up' : 'delta-down' }, ' ' + (b > a ? '▲' : '▼')) : null));
   const p1 = v => pct(v), r0 = v => fmt(v);
-  sc.append(h('div', { class: 'panel' }, h('div', { class: 'label', style: { marginBottom: '6px' } }, 'Au combat'),
+  sc.append(h('div', { class: 'panel half' }, h('div', { class: 'label', style: { marginBottom: '6px' } }, 'Au combat'),
     h('div', { class: 'derived' },
       d('PV max', st0.maxHp, st.maxHp, r0), d('Dégâts', Math.round(st0.dmg), Math.round(st.dmg), r0), d('Armure', st0.armor, st.armor, r0), d('Vitesse', st0.speed, st.speed, v => round1(v).toString().replace('.', ',')),
       d('Esquive', st0.evade, st.evade, p1), d('Critique', st0.crit, st.crit, p1), d('Enchaînement', st0.combo, st.combo, p1), d('Parade', st0.block, st.block, p1))));
@@ -3982,7 +4113,7 @@ function choicePanel() {
       S.hero.choices--; S.pendingChoice = null; save(); Sfx.play('level'); toast(L.title); render();
     } }, c.type === 'pet' ? petPreview({ species: c.species, rarity: c.rarity, ilvl: 1 }, 1, 'cardpet', 1.4) : null, h('span', { class: 'k' }, L.sub), h('b', null, L.title), h('p', null, L.desc)));
   });
-  return h('div', { class: 'panel col choice' }, h('div', { class: 'row' }, icon('xp', 22), h('b', { class: 'grow', style: { fontFamily: 'var(--f-display)', fontWeight: 400, fontSize: '19px' } }, 'Choix de la Brute'), S.hero.choices > 1 ? h('span', { class: 'chip' }, `${S.hero.choices} en attente`) : null),
+  return h('div', { class: 'panel col choice half' }, h('div', { class: 'row' }, icon('xp', 22), h('b', { class: 'grow', style: { fontFamily: 'var(--f-display)', fontWeight: 400, fontSize: '19px' } }, 'Choix de la Brute'), S.hero.choices > 1 ? h('span', { class: 'chip' }, `${S.hero.choices} en attente`) : null),
     h('div', { style: { fontSize: '13px', color: 'var(--muted-ink)' } }, `Tous les ${CHOICE_EVERY} niveaux, 2 bonus sont tirés au hasard (pouvoir, familier, PV ou points). Tu en gardes un.`), cards);
 }
 function openSaveIO() {
@@ -4008,7 +4139,7 @@ function confirmReset() {
 
 /* ---------- Onglet Sac ---------- */
 function tabBag() {
-  const sc = h('div', { class: 'scroll' });
+  const sc = h('div', { class: 'scroll duo' });
   // aperçu exact de « Tout optimiser » : simulé sur une copie de la partie
   let prev = null;
   if (upgrades().length || junk().length) { const snap = JSON.stringify(S); prev = optimizeAll(2); S = JSON.parse(snap); }
@@ -4017,7 +4148,7 @@ function tabBag() {
   if (S.run && S.run.loot.length) sc.append(h('div', { class: 'panel col' }, h('div', { class: 'row' }, icon('lock', 18), h('span', { class: 'label grow' }, `Butin du run · en jeu`)),
     h('div', { class: 'grid' }, S.run.loot.map(it => itemTile(it, { delta: deltaFor(it), onclick: () => openItem(it, null, true) })))));
   const slot = (key, label, ei) => h('div', null, itemTile(S.equip[key], { empty: label, emptyIcon: ei, onclick: () => S.equip[key] && openItem(S.equip[key], key) }), h('div', { class: 'slotlab' }, label));
-  sc.append(h('div', { class: 'panel col' }, h('div', { class: 'label' }, 'Équipé'),
+  sc.append(h('div', { class: 'panel col half' }, h('div', { class: 'label' }, 'Équipé'),
     h('div', { class: 'slots' }, slot('weapon', 'Arme', 'poings'), slot('armor', 'Armure', 'cuir'), slot('tal1', 'Talisman', 'amulette'), slot('tal2', 'Talisman', 'anneau'))));
   const nSlots = petSlots(S.hero.level);
   const petSlot = i => {
@@ -4025,7 +4156,7 @@ function tabBag() {
     const p = S.pets[i];
     return h('div', null, p ? h('button', { class: 'tile petslot', style: { '--rbg': rarityBg(p.rarity) }, onclick: () => openItem(p, 'pet' + i) }, petPreview(p, 1, 'petcv', 1.5), h('span', { class: 'lv num' }, p.ilvl)) : itemTile(null, { empty: 'Familier', emptyIcon: 'paw' }), h('div', { class: 'slotlab' }, p ? PETS[p.species].name : 'Libre'));
   };
-  sc.append(h('div', { class: 'panel col' }, h('div', { class: 'label' }, 'Familiers'), h('div', { class: 'slots three' }, petSlot(0), petSlot(1), petSlot(2))));
+  sc.append(h('div', { class: 'panel col half' }, h('div', { class: 'label' }, 'Familiers'), h('div', { class: 'slots three' }, petSlot(0), petSlot(1), petSlot(2))));
   const inv = S.inv.slice().sort((a, b) => (b.slot === 'pet') - (a.slot === 'pet') || b.rarity - a.rarity || b.ilvl - a.ilvl);
   sc.append(h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'label num' }, `Sac · ${S.inv.length} / ${INV_MAX}`)));
   if (inv.length) sc.append(h('div', { style: { fontSize: '12px', color: 'var(--muted-ink)' } }, h('b', { class: 'delta-up' }, '▲ +N'), ' = gain de puissance si tu l\'équipes. ▼ = moins bon que ce que tu portes.'));

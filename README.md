@@ -15,10 +15,16 @@ MVP jouable. Ouvrir `index.html` dans un navigateur (mobile ou desktop). Sauvega
 - **Collection** (onglet Héros) façon MyBrute : grille de tous les pouvoirs, armes, familiers et familiers de boss. Débloqué = tuile dorée, verrouillé = estompé, détail au toucher.
 
 ## Tutoriel
-Progressif (`COACH` dans 90-main) : une carte par notion, affichée une seule fois au moment de la découverte. Les familiers ne sont présentés qu'au déblocage du 1er emplacement (niveau 5). En combat, pause sur le premier cercle de coup parfait et de parade.
+Progressif (`COACH` dans 90-main) : une carte par notion, affichée une seule fois au moment de la découverte. La carte de bienvenue précise qu'on joue en portrait ou en paysage en tournant l'appareil. Techniques auto à rage pleine : expliquées à la 1re occurrence, désactivables dans les Options. Les familiers ne sont présentés qu'au déblocage du 1er emplacement (niveau 5). En combat, pause sur le premier cercle de coup parfait et de parade.
 
 ## Visuel
 Fantasy steampunk au crépuscule, interface en flat design pastel (fonds unis, coins arrondis, ni dégradé ni halo). Une couleur = un sens : beurre (action principale, XP), ciel (défense, info), menthe (positif), pêche (attaque, rage), corail (danger), lavande (choix secondaire). Combattants chibi originaux façon anime peint : grands yeux, frange en mèches, tenue en couches, peints sur un calque puis éclairés (lumière chaude, ombre au sol, liseré de contre-jour à la couleur du monde). Combat plein écran : décor du palier derrière, HUD sur cartes sombres, bannière « Coup parfait », cercle de réflexe « TAPE » / « PARE », jauge de rage et boutons de techniques (1 à 3). 10 mondes (Pont des Flèches, Docks de Brume, Fonderie Écarlate, Toits Néon, Serres de Verre, Bas-Fonds Chimiques, Arène des Barons, Beffroi de Cendre, L'Observatoire, Le Sommet), avec dirigeables et particules. Le décor du palier sert de fond flouté à toute l'app. Polices : Permanent Marker (grands titres), Barlow Semi Condensed (interface et texte). Combattants : personnages peints des packs SpriteCanvas, CC0 / domaine public (« Sprites by SpriteCanvas, spritecanvas.com ») : 3 héros au choix (Chevalier, Samouraï, MechBot) et 12 types d'adversaires déclinés en couleur, taille et silhouette. Packs bruts dans `characters/` (non publiés), convertis en atlas WebP par `tools/sprites.py` (`assets/sprites/`, `src/05-sprites.js`), copiés par le build dans `sprites/` à côté de la page. Décors, interface, familiers et héros « Dessiné » sont dessinés en code.
+
+## Écrans et orientations (`styles.css`, `70-arena`)
+- **Téléphone portrait** : colonne mobile (480 px max), nav en bas.
+- **Téléphone paysage** (hauteur < 560 px) : pleine largeur, nav en rail à gauche, Héros et Sac sur 2 colonnes (`.duo` / `.half`). Combat : HUD resserré, rage et techniques sur une seule bande basse.
+- **Tablette et ordinateur** (≥ 700 × 560 px) : plein écran. Portrait = colonne centrée de 720 px ; paysage ≥ 900 px = rail à gauche et 2 colonnes.
+- **Caméra de combat** : portrait cadré sur la largeur ; paysage cadré sur la hauteur (`VIEW_H`, `VIEW_H_LOW` pour les écrans bas), décor prolongé en miroir sur les côtés.
 
 ## Architecture (`src/`, assemblé par `node tools/build.mjs`)
 | Fichier | Rôle |
