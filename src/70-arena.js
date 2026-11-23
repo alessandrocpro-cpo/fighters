@@ -1,5 +1,5 @@
 /* ===== ARÈNE : un monde gothique par palier, effets, lecteur de combat interactif ===== */
-const VIEW_H = 430; // hauteur de monde visible en paysage (combattants bien lisibles sans rogner le sol)
+const VIEW_H = 430, VIEW_H_LOW = 315; // hauteur de monde visible en paysage (combattants bien lisibles sans rogner le sol)
 const AW = 400, AH = 280, GROUND = 238, EXT = 440, BOT = 300, FLOOR_BACK = 192, LEDGE = 292;
 const tierIdx = floor => Math.min(TIERS.length - 1, Math.floor((floor - 1) / 10));
 const tierOf = floor => TIERS[tierIdx(floor)];
@@ -480,10 +480,12 @@ class FightPlayer {
     if (!w || !h) return;
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
     const c = cv.getContext('2d'), T = this.tier;
-    const cw = cv.width, ch = cv.height, gr = this.o.groundAt || .64;
+    // téléphone en paysage (écran bas) : zoom plus serré et sol plus bas, juste au-dessus de la bande de commandes
+    const low = w > h && h < 560, vh = low ? VIEW_H_LOW : VIEW_H;
+    const cw = cv.width, ch = cv.height, gr = this.o.groundAt || (low ? .77 : .64);
     /* cadrage plein écran : en portrait, 82% de la largeur du monde ; en paysage (tablette, ordinateur),
        la hauteur prime (~VIEW_H unités visibles) et le décor est prolongé en miroir sur les côtés. Sol à ~64% de la hauteur */
-    let s = Math.max(Math.min(cw / (AW * .82), ch / VIEW_H), gr * ch / (GROUND + EXT - 20), (1 - gr) * ch / (AH + BOT - GROUND - 10));
+    let s = Math.max(Math.min(cw / (AW * .82), ch / vh), gr * ch / (GROUND + EXT - 20), (1 - gr) * ch / (AH + BOT - GROUND - 10));
     let ox = (cw - AW * s) / 2, oy = ch * gr - GROUND * s;
     // coup de zoom sur l'impact (tenu pendant l'arrêt sur image, puis relâché)
     if (this.zoom > .002) { const [fx, fy] = this.zf, px = ox + fx * s, py = oy + fy * s; s *= 1 + this.zoom; ox = px - fx * s; oy = py - fy * s; }

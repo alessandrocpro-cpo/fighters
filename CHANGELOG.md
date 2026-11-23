@@ -10,6 +10,10 @@ Tablette (iPad) et grand écran, en portrait comme en paysage.
 - Combat paysage : cadrage calé sur la hauteur (`VIEW_H`, 70-arena), décor prolongé en miroir sur les côtés (dirigeables et particules compris), HUD et commandes centrés
 - Fenêtres (butin, pause, tutoriel) centrées et limitées à 560 px de large
 - Hauteur en `100dvh` quand le navigateur le gère (barres Safari)
+- Téléphone en paysage (iPhone tourné) : app pleine largeur, nav en rail à gauche, Héros et Sac sur 2 colonnes
+- Combat sur téléphone en paysage : HUD resserré, commandes sur une seule bande basse (rage à gauche, techniques à droite), zoom plus serré et sol plus bas (`VIEW_H_LOW`)
+- Tutoriel : la carte de bienvenue précise qu'on peut jouer en portrait ou en paysage en tournant l'appareil
+- iOS : plus de texte grossi automatiquement en paysage (`text-size-adjust`)
 
 ## 0.9.0 — release publique (2026-11-23)
 Tutoriel, sorts lisibles, familiers peints, tour plus longue.

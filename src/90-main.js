@@ -330,7 +330,7 @@ function pickTip() {
 }
 /* ---------- Tutoriel progressif : une carte par notion, au moment où le joueur la découvre ---------- */
 const COACH = {
-  welcome: { ic: 'tower', t: 'Bienvenue dans la Tour', x: ['Chaque étage cache un adversaire : bats-le pour monter.', 'Tes victoires rapportent de l\'XP et du butin pour renforcer ton héros.'] },
+  welcome: { ic: 'tower', t: 'Bienvenue dans la Tour', x: ['Chaque étage cache un adversaire : bats-le pour monter.', 'Tes victoires rapportent de l\'XP et du butin pour renforcer ton héros.', 'Portrait ou paysage : tourne simplement ton téléphone ou ta tablette, le jeu s\'adapte.'] },
   tap: { ic: 'epee', t: 'Coup parfait', x: ['Quand le cercle doré se referme sur l\'adversaire, tape l\'écran.', 'Au bon moment : dégâts ×1,5. Trop tôt ou trop tard : coup normal.'], cta: 'À moi !' },
   parry: { ic: 'shield', t: 'Coup dangereux « ! »', x: ['Le cercle devient bleu : tape quand il se referme sur toi.', 'Parade réussie : dégâts réduits de 70 %.'], cta: 'Je pare' },
   rage: { ic: 't_devaste', t: 'Technique prête', x: ['Ta rage monte quand tu frappes et quand tu encaisses. Elle suffit : touche ta technique en bas de l\'écran.', 'Si tu la laisses monter à 100, tes techniques partent toutes seules. Tu peux couper ça dans les options (engrenage).'] },

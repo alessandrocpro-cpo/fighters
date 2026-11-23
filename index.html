@@ -29,6 +29,7 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; } /* iOS : pas de texte grossi en paysage */
 body { margin: 0; touch-action: manipulation; background: var(--bg); color: var(--text); font-family: var(--f-body); font-weight: 500; font-size: 15px; overflow: hidden; user-select: none; -webkit-user-select: none; }
 body::before { content: ""; position: fixed; inset: -12px; pointer-events: none; background: var(--bd) center 28% / cover no-repeat, var(--bg); filter: blur(4px) brightness(.42) saturate(.55); }
 body::after { content: ""; position: fixed; inset: 0; pointer-events: none; background: rgba(24,26,40,.45); }
@@ -441,6 +442,66 @@ h1, h2, h3 { margin: 0; font-family: var(--f-display); font-weight: 400; letter-
   .scroll.duo > * { grid-column: 1 / -1; }
   .scroll.duo > .half { grid-column: auto; }
   .ov .sheet { max-height: 94%; }
+}
+
+/* ---------- Téléphone en paysage (iPhone tourné) ----------
+   Peu de hauteur : l'app prend toute la largeur, nav en rail à gauche, barres compactes.
+   Combat : HUD resserré en haut, commandes en une seule bande basse (rage à gauche, techniques à droite). */
+@media (orientation: landscape) and (max-height: 559px) and (min-width: 560px) {
+  #app { max-width: none; box-shadow: none; }
+  #app:has(> .nav) { display: grid; grid-template-columns: calc(78px + env(safe-area-inset-left, 0px)) 1fr; grid-template-rows: auto 1fr; }
+  #app:has(> .nav) > .top { grid-column: 2; grid-row: 1; }
+  #app:has(> .nav) > .scroll { grid-column: 2; grid-row: 2; min-height: 0; }
+  #app:has(> .nav) > .nav { grid-column: 1; grid-row: 1 / 3; grid-template-columns: 1fr; align-content: center; gap: 4px;
+    padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px)); }
+  #app:has(> .nav) > .nav button { padding: 8px 0 7px; font-size: 13px; }
+  #app:has(> .nav) > .nav .badge { right: 6px; }
+  .top { padding: calc(6px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px), calc((100% - 760px) / 2)) 6px max(16px, calc((100% - 760px) / 2)); }
+  .top .avatar { width: 38px; height: 38px; border-radius: 10px; }
+  .top .name { font-size: 17px; }
+  .scroll { padding: 10px max(16px, env(safe-area-inset-right, 0px), calc((100% - 760px) / 2)) 14px max(16px, env(safe-area-inset-left, 0px), calc((100% - 760px) / 2)); }
+  #app:has(> .nav) > .scroll { padding-left: max(16px, calc((100% - 760px) / 2)); }
+  .scroll.duo { display: grid; grid-template-columns: 1fr 1fr; align-content: start; align-items: start; grid-auto-flow: row dense; }
+  .scroll.duo > * { grid-column: 1 / -1; }
+  .scroll.duo > .half { grid-column: auto; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+  .codex { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
+  .create-prev { height: 170px; }
+  .logo h1 { font-size: 40px; }
+  .sheet { max-width: 560px; max-height: 96%; }
+  .ov.center .sheet { max-width: 500px; }
+  .ov.coach-top .sheet { max-width: 520px; margin-top: calc(8px + env(safe-area-inset-top, 0px)); }
+  .toast { top: calc(56px + env(safe-area-inset-top, 0px)); }
+  /* combat */
+  .fhud { max-width: 720px; margin: 0 auto; grid-template-columns: 1fr 48px 1fr; padding: calc(6px + env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px)); }
+  .fside { grid-template-columns: 40px 1fr; padding: 4px; border-radius: 12px; }
+  .fside.R { grid-template-columns: 1fr 40px; }
+  .pframe { width: 40px; height: 40px; border-radius: 9px; }
+  .pframe .pc { border-radius: 7px; }
+  .fside .nm { font-size: 14px; margin-bottom: 2px; }
+  .hpb { height: 14px; }
+  .fl { width: 48px; height: 48px; border-radius: 12px; }
+  .fl b { font-size: 20px; }
+  .pausebtn { top: calc(6px + env(safe-area-inset-top, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); width: 40px; height: 40px; }
+  .fhud { padding-right: max(56px, calc(env(safe-area-inset-right, 0px) + 50px)); }
+  .fbanner { top: 22%; }
+  .fbanner h2 { font-size: 30px; }
+  .fbottom { flex-direction: row; align-items: center; gap: 12px; border-radius: 16px 16px 0 0;
+    padding: 6px max(10px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); }
+  .fbottom .rage { flex: 0 0 clamp(170px, 30%, 260px); grid-template-columns: auto 1fr auto; row-gap: 2px; }
+  .fbottom .rage .orbtag { grid-column: 1 / -1; font-size: 12px; }
+  .fbottom .abil { flex: 1; min-width: 0; }
+  .fbottom .finfo { display: none; }
+  .ab, .abil.n3 .ab { min-height: 50px; padding: 6px 64px 6px 10px; grid-template-columns: 28px 1fr; justify-items: start; text-align: left; gap: 6px; }
+  .abil.n3 .ab { padding-right: 10px; grid-template-columns: 1fr; padding-bottom: 26px; }
+  .ab .cost { left: auto; right: 8px; bottom: auto; top: 50%; transform: translateY(-50%); }
+  .abil.n3 .ab .cost { left: 8px; right: auto; top: auto; bottom: 4px; transform: none; font-size: 12px; }
+  .abil.n3 .abic { display: none; }
+  .abtx b { font-size: 15px; }
+  .abtx small { font-size: 12px; }
+  .ab em { display: none; }
+  .notech { padding: 8px; }
+  .lvtap { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
 }
 
 </style>
@@ -1922,7 +1983,7 @@ function previewLoop(t) {
 
 /* ---- 70-arena.js ---- */
 /* ===== ARÈNE : un monde gothique par palier, effets, lecteur de combat interactif ===== */
-const VIEW_H = 430; // hauteur de monde visible en paysage (combattants bien lisibles sans rogner le sol)
+const VIEW_H = 430, VIEW_H_LOW = 315; // hauteur de monde visible en paysage (combattants bien lisibles sans rogner le sol)
 const AW = 400, AH = 280, GROUND = 238, EXT = 440, BOT = 300, FLOOR_BACK = 192, LEDGE = 292;
 const tierIdx = floor => Math.min(TIERS.length - 1, Math.floor((floor - 1) / 10));
 const tierOf = floor => TIERS[tierIdx(floor)];
@@ -2403,10 +2464,12 @@ class FightPlayer {
     if (!w || !h) return;
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
     const c = cv.getContext('2d'), T = this.tier;
-    const cw = cv.width, ch = cv.height, gr = this.o.groundAt || .64;
+    // téléphone en paysage (écran bas) : zoom plus serré et sol plus bas, juste au-dessus de la bande de commandes
+    const low = w > h && h < 560, vh = low ? VIEW_H_LOW : VIEW_H;
+    const cw = cv.width, ch = cv.height, gr = this.o.groundAt || (low ? .77 : .64);
     /* cadrage plein écran : en portrait, 82% de la largeur du monde ; en paysage (tablette, ordinateur),
        la hauteur prime (~VIEW_H unités visibles) et le décor est prolongé en miroir sur les côtés. Sol à ~64% de la hauteur */
-    let s = Math.max(Math.min(cw / (AW * .82), ch / VIEW_H), gr * ch / (GROUND + EXT - 20), (1 - gr) * ch / (AH + BOT - GROUND - 10));
+    let s = Math.max(Math.min(cw / (AW * .82), ch / vh), gr * ch / (GROUND + EXT - 20), (1 - gr) * ch / (AH + BOT - GROUND - 10));
     let ox = (cw - AW * s) / 2, oy = ch * gr - GROUND * s;
     // coup de zoom sur l'impact (tenu pendant l'arrêt sur image, puis relâché)
     if (this.zoom > .002) { const [fx, fy] = this.zf, px = ox + fx * s, py = oy + fy * s; s *= 1 + this.zoom; ox = px - fx * s; oy = py - fy * s; }
@@ -3595,7 +3658,7 @@ function pickTip() {
 }
 /* ---------- Tutoriel progressif : une carte par notion, au moment où le joueur la découvre ---------- */
 const COACH = {
-  welcome: { ic: 'tower', t: 'Bienvenue dans la Tour', x: ['Chaque étage cache un adversaire : bats-le pour monter.', 'Tes victoires rapportent de l\'XP et du butin pour renforcer ton héros.'] },
+  welcome: { ic: 'tower', t: 'Bienvenue dans la Tour', x: ['Chaque étage cache un adversaire : bats-le pour monter.', 'Tes victoires rapportent de l\'XP et du butin pour renforcer ton héros.', 'Portrait ou paysage : tourne simplement ton téléphone ou ta tablette, le jeu s\'adapte.'] },
   tap: { ic: 'epee', t: 'Coup parfait', x: ['Quand le cercle doré se referme sur l\'adversaire, tape l\'écran.', 'Au bon moment : dégâts ×1,5. Trop tôt ou trop tard : coup normal.'], cta: 'À moi !' },
   parry: { ic: 'shield', t: 'Coup dangereux « ! »', x: ['Le cercle devient bleu : tape quand il se referme sur toi.', 'Parade réussie : dégâts réduits de 70 %.'], cta: 'Je pare' },
   rage: { ic: 't_devaste', t: 'Technique prête', x: ['Ta rage monte quand tu frappes et quand tu encaisses. Elle suffit : touche ta technique en bas de l\'écran.', 'Si tu la laisses monter à 100, tes techniques partent toutes seules. Tu peux couper ça dans les options (engrenage).'] },
