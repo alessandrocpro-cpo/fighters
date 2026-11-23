@@ -5,6 +5,16 @@ Règle : on développe en continu (dépôt GitHub + page de test Claude). Une **
 ## Non publié (en cours)
 - (rien)
 
+## 0.7.0 — release publique (2026-11-23)
+Combattants redessinés, plus proches d'une illustration anime peinte.
+- Silhouette plus élancée (tête ~1/3 du corps), plus grands à l'écran, garde de boxe au repos
+- Visage anime : grands yeux en amande, iris en dégradé, pupille, deux reflets, cils épais, sourcils froncés, nez, joues ; expressions conservées (douleur, cri de victoire, KO)
+- Cheveux en volume : frange d'un seul tenant à pointes, séparations de mèches, anneau de lumière ; pointes indépendantes pour Pics et Crête
+- Tenue en couches : tee-shirt clair, veste ouverte à col relevé, sangle en travers, double ceinture et sacoche, genouillères, bottes montantes à sangles, brassards lacés, mitaines
+- Éclairage d'ensemble : chaque combattant est peint sur un calque puis éclairé (lumière chaude en haut, ombre au sol, liseré de contre-jour à la couleur du monde)
+- Adversaires : marques au visage (cicatrice, peinture, pansement, tatouage)
+- Correctif : un « null » s'affichait sous le bandeau de combat
+
 ## 0.6.1 — release publique (2026-11-22)
 Interface en flat design pastel : le rose néon gênait la lecture.
 - Fonds unis gris-bleu, coins arrondis, plus de dégradés, halos ni contours néon

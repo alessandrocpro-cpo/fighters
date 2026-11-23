@@ -367,10 +367,10 @@ class FightPlayer {
     for (let i = 0; i < n; i++) { const a = Math.random() * TAU, sp = .08 + Math.random() * .25; this.fx.push({ kind: kind || 'spark', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (kind === 'dust' ? .02 : .05), life: 0, max: 260 + Math.random() * 220, col, s: 2 + Math.random() * 3, rot: Math.random() * TAU }); }
   }
   impact(x, y, big) { if (!this.skipped) this.fx.push({ kind: 'impact', x, y, life: 0, max: big ? 240 : 170, s: big ? 1.5 : 1, rot: Math.random() * TAU }); }
-  slashFx(v) { if (!this.skipped) this.fx.push({ kind: 'slash', x: v.x + v.face * 26, y: v.y - (v.kind === 'pet' ? 26 : 66 * CH), face: v.face, life: 0, max: 170, small: v.kind === 'pet' }); }
+  slashFx(v) { if (!this.skipped) this.fx.push({ kind: 'slash', x: v.x + v.face * 26, y: v.y - (v.kind === 'pet' ? 26 : 76 * CH), face: v.face, life: 0, max: 170, small: v.kind === 'pet' }); }
   ring(v, col) { if (!this.skipped) this.fx.push({ kind: 'ring', x: v.x, y: this.chest(v), col, life: 0, max: 420 }); }
   top(v) { return v.y - (v.kind === 'pet' ? 46 : HERO_H * CH * v.scale); }
-  chest(v) { return v.y - (v.kind === 'pet' ? 24 : 62 * CH * v.scale); }
+  chest(v) { return v.y - (v.kind === 'pet' ? 24 : CHEST_Y * CH * v.scale); }
 
   loop(now) {
     if (!this.alive) return;

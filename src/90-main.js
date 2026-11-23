@@ -429,7 +429,7 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
   let bannerT = null, shownParry = false;
   const showBanner = (title, sub, num, ms) => {
     banner.innerHTML = '';
-    banner.append(h('div', { class: 'brush' }, h('h2', null, title), sub ? h('p', null, sub) : null), num != null ? h('div', { class: 'bnum num' }, num) : null);
+    banner.append(h('div', { class: 'brush' }, h('h2', null, title), sub ? h('p', null, sub) : null), ...(num != null ? [h('div', { class: 'bnum num' }, num)] : []));
     banner.classList.remove('on'); void banner.offsetWidth; banner.classList.add('on');
     clearTimeout(bannerT); bannerT = setTimeout(() => banner.classList.remove('on'), ms || 1400);
   };
@@ -787,7 +787,7 @@ function renderCreate(app) {
   const rebuildView = () => { view = makeView({ look: st.look }, { weapon: starterWeapon(st.origin) }, 'L', 0, 0); };
   rebuildView();
   const prev = h('canvas', { class: 'create-prev' });
-  attachPreview(prev, () => view, { zoom: .74, dy: 12 });
+  attachPreview(prev, () => view, { zoom: .64, dy: 12 });
   const sc = h('div', { class: 'scroll' });
   const nameIn = h('input', { class: 'namein', id: 'heroname', maxlength: 14, 'aria-label': 'Nom du héros' }); nameIn.value = st.name;
   nameIn.addEventListener('input', () => { st.name = nameIn.value; });
