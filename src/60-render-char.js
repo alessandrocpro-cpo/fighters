@@ -84,8 +84,12 @@ function makeView(ent, equip, side, x, y) {
     phase: Math.random() * 10, expr: 'neutral', stun: 0, glow: 0,
   };
 }
-function setPose(v, name, rate) { v.target = (v.kind === 'pet' ? PET_POSES : POSES)[name]; v.rate = rate || 12; }
+function setPose(v, name, rate) {
+  v.target = (v.kind === 'pet' ? PET_POSES : POSES)[name]; v.rate = rate || 12;
+  if (v.anim !== name) { v.anim = name; v.animT = 0; } // clip du sprite peint, s'il y en a un
+}
 function updateView(v, dt) {
+  v.animT = (v.animT || 0) + dt;
   const k = 1 - Math.exp(-v.rate * dt / 1000);
   for (const key in v.target) v.pose[key] += (v.target[key] - v.pose[key]) * k;
   if (v.running) v.runT += dt * .02;
@@ -473,7 +477,27 @@ function star(c, x, y, r, col) {
 
 /* ---------- Éclairage d'ensemble : calque + dégradé + contre-jour ---------- */
 const _litA = document.createElement('canvas'), _litB = document.createElement('canvas');
+/* ---------- Héros en sprite peint (prototype : épéiste SpriteCanvas, CC0) ---------- */
+const _sprImg = {};
+function spriteImg(S) {
+  let im = _sprImg[S.src.length]; if (!im) { im = _sprImg[S.src.length] = new Image(); im.src = S.src; }
+  return im.complete && im.naturalWidth ? im : null;
+}
+function drawSpriteFighter(c, v) {
+  const S = v.sprite, p = v.pose, k = v.scale * CH * HERO_H / S.stand, ko = v.anim === 'ko';
+  c.save(); c.translate(v.x, v.y); c.globalAlpha *= .42 * v.alpha; // ombre au sol
+  const sh = 1 - Math.min(.5, -p.bodyY / 80); c.beginPath(); c.ellipse(ko ? -v.face * 16 : 0, 0, (ko ? 52 : 30) * sh * v.scale, 7 * sh, 0, 0, TAU);
+  c.fillStyle = '#0a0612'; c.fill(); c.restore();
+  const img = spriteImg(S); if (!img) return;
+  const cl = S.clips[v.anim] || S.clips.idle;
+  let i = Math.floor((v.animT || 0) / cl.ms); i = cl.loop ? i % cl.f.length : Math.min(i, cl.f.length - 1);
+  const n = cl.f[i], sx = (n % S.cols) * S.fw, sy = Math.floor(n / S.cols) * S.fh;
+  c.save(); c.translate(v.x, v.y + (v.anim === 'dodge' ? p.bodyY * .6 : 0)); c.scale(k * v.face, k); c.globalAlpha *= v.alpha;
+  c.drawImage(img, sx, sy, S.fw, S.fh, -S.px, -S.py, S.fw, S.fh);
+  c.restore();
+}
 function drawFighter(c, v, t) {
+  if (v.sprite) return drawSpriteFighter(c, v);
   const pet = v.kind === 'pet';
   const m = c.getTransform(), S = Math.hypot(m.a, m.b) || 1;
   const k = pet ? v.scale : v.scale * CH, p = v.pose;

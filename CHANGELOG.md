@@ -1,9 +1,21 @@
 # Changelog Climbrawl
 
-Règle : on développe en continu (dépôt GitHub + page de test Claude). Une **release** = push sur la branche `release` (GitHub Pages), uniquement sur demande explicite (« release »). Chaque release incrémente `GAME_VERSION` (src/00-core.js) et ajoute une entrée ici, puis un tag git `vX.Y.Z`.
+Règle : chaque version livrée part en même temps sur la page de test Claude (artefact) et sur GitHub : push sur `main` et `release` (GitHub Pages), plus un tag git `vX.Y.Z`. Chaque version incrémente `GAME_VERSION` (src/00-core.js) et ajoute une entrée ici.
 
 ## Non publié (en cours)
 - (rien)
+
+## 0.7.3 — release publique (2026-11-23)
+- L'épéiste peint est aussi ton héros hors combat : avatar en haut de l'écran, fiche Héros, portrait du bandeau de combat
+- Onglet Héros : choix « Apparence » (Épéiste peint / Dessiné), le même que dans le menu Pause
+- La création de personnage reste dessinée (peau, coiffure, couleurs servent au héros « Dessiné »)
+
+## 0.7.2 — release publique (2026-11-23)
+Prototype : héros en sprite peint.
+- En combat, le héros est l'épéiste peint du pack SpriteCanvas « swordsman » (CC0, domaine public) : repos, course, armé, frappe, coup reçu, esquive, garde, victoire, KO
+- Atlas WebP unique (~0,5 Mo) généré par `tools/sprites.py` à partir du pack
+- Menu Pause : « Apparence du héros (test) » pour revenir au héros dessiné en code (équipement visible)
+- Limites du prototype : arme, armure et coiffure du héros ne se voient plus en combat ; ennemis restent dessinés en code
 
 ## 0.7.1 — release publique (2026-11-23)
 Les moments forts du combat se voient et se comprennent.

@@ -211,7 +211,7 @@ const heroTodo = () => (S.hero.points ? 1 : 0) + (S.hero.choices || 0) + (S.hero
 function renderTop() {
   const st = heroStats();
   return h('div', { class: 'top' },
-    portrait(S.hero, S.equip, 1, 'avatar'),
+    portrait(S.hero, S.equip, 1, 'avatar', true),
     h('div', { class: 'grow' },
       h('div', { class: 'name' }, S.hero.name),
       h('div', { class: 'sub num' }, `Niv. ${S.hero.level} · Puissance ${fmt(teamPower(st, myPets()))}`), xpBar()),
@@ -395,7 +395,7 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
     bars[id] = hpb();
     const minis = h('div', { class: 'minis' });
     Object.keys(U).filter(k => k[0] === id && k.length > 1).forEach(k => { const b = h('div', { class: 'mini' }, h('i', { style: { width: '100%' } })); bars[k] = b; minis.append(b); });
-    return h('div', { class: 'fside ' + id }, h('div', { class: 'pframe' }, portrait(ent, eq, id === 'L' ? 1 : -1, 'pc')),
+    return h('div', { class: 'fside ' + id }, h('div', { class: 'pframe' }, portrait(ent, eq, id === 'L' ? 1 : -1, 'pc', id === 'L')),
       h('div', { class: 'pinfo' }, h('div', { class: 'nm' }, ent.name), bars[id], minis));
   };
   const canvas = h('canvas', { class: 'arena' });
@@ -440,7 +440,7 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
     clearTimeout(bannerT); bannerT = setTimeout(() => banner.classList.remove('on'), ms || 1400);
   };
   const fp = new FightPlayer(canvas, {
-    F, heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, floor, speed: S.speed,
+    F, heroEnt, heroEquip: heroEq, heroPets: pets, enemy: en, floor, speed: S.speed, heroSprite: S.heroSprite !== false,
     orbVal: Math.max(2, Math.round(xpReward(floor) * .06)),
     onHp: hp => { for (const k in hp) { if (!bars[k]) continue; if (k.length === 1) setHpb(bars[k], hp[k], U[k].max); else bars[k].firstChild.style.width = clamp(hp[k] / U[k].max, 0, 1) * 100 + '%'; } },
     onRage: F2 => {
@@ -472,6 +472,10 @@ function showFight(heroEnt, heroEq, pets, en, F, floor) {
     const ov = overlay(close => [
       h('h2', null, 'Pause'),
       h('div', { class: 'label', style: { textAlign: 'center' } }, 'Vitesse'), spd,
+      // prototype : héros épéiste peint (sprite) ou héros dessiné en code (équipement visible)
+      h('div', { class: 'label', style: { textAlign: 'center' } }, 'Apparence du héros (test)'),
+      h('div', { class: 'row', style: { justifyContent: 'center' } }, [['Épéiste peint', true], ['Dessiné', false]].map(([lb, on]) =>
+        h('button', { class: 'pill' + ((S.heroSprite !== false) === on ? ' on' : ''), onclick: () => { S.heroSprite = on; fp.setHeroSprite(on); save(); ov.close(); openPause(); } }, lb))),
       h('button', { class: 'btn btn-gold', onclick: () => { close(); fp.togglePause(false); } }, 'Reprendre'),
       h('button', { class: 'btn btn-stone', onclick: () => { close(); fp.skip(); } }, 'Passer le combat'),
       h('p', { style: { margin: 0, fontSize: '13px', textAlign: 'center', color: 'var(--muted)' } }, 'Passer joue la fin du combat en automatique : sans coup parfait ni parade, techniques lancées dès que possible.'),
@@ -548,14 +552,19 @@ function tabHero() {
   const st0 = heroStats(), st = computeStats(preview, S.equip);
   sc.append(h('div', { class: 'panel' },
     h('div', { class: 'hero-card' },
-      fullPreview(S.hero, S.equip, 1, '', 1.1),
+      fullPreview(S.hero, S.equip, 1, '', 1.1, true),
       h('div', { class: 'col', style: { gap: '4px', minWidth: 0 } },
         h('div', { class: 'label' }, `${ORIGINS[S.hero.origin].name} · niveau ${S.hero.level}`),
         h('h2', { style: { fontSize: '26px', overflowWrap: 'anywhere' } }, S.hero.name),
         h('div', { class: 'label', style: { marginTop: '6px' } }, `XP ${fmt(S.hero.xp)} / ${fmt(xpToNext(S.hero.level))}`), xpBar(),
         h('div', { class: 'label', style: { marginTop: '6px' } }, 'Puissance'),
         h('div', { class: 'power num' }, fmt(teamPower(st, myPets())), st.power !== st0.power ? h('small', { class: 'delta-up' }, ` +${fmt(st.power - st0.power)}`) : null),
-        h('div', { style: { fontSize: '12px', color: 'var(--muted-ink)' } }, `${S.stats.runs} runs · record étage ${S.best}`)))));
+        h('div', { style: { fontSize: '12px', color: 'var(--muted-ink)' } }, `${S.stats.runs} runs · record étage ${S.best}`))),
+    // apparence : épéiste peint (prototype) ou héros dessiné (équipement et coiffure visibles)
+    h('div', { class: 'row', style: { justifyContent: 'center', gap: '8px', marginTop: '10px' } },
+      h('span', { class: 'label' }, 'Apparence'),
+      [['Épéiste peint', true], ['Dessiné', false]].map(([lb, on]) =>
+        h('button', { class: 'pill' + (heroSpriteOn() === on ? ' on' : ''), onclick: () => { S.heroSprite = on; save(); render(); } }, lb)))));
   if (S.hero.choices) sc.append(choicePanel());
   const rows = h('div', { class: 'alloc' });
   for (const k of STAT_KEYS) {

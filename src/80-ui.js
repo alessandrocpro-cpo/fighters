@@ -126,15 +126,18 @@ function toast(msg) {
 }
 
 /* Portrait animé (tête) réutilisable */
-function portrait(ent, equip, face, cls) {
+/* Héros du joueur : épéiste peint (sprite) sauf si le joueur a choisi « Dessiné » */
+const heroSpriteOn = () => !(typeof S !== 'undefined' && S && S.heroSprite === false);
+function heroView(v, hero) { if (hero && heroSpriteOn()) { v.sprite = SPRITE_SWORDSMAN; spriteImg(SPRITE_SWORDSMAN); } return v; }
+function portrait(ent, equip, face, cls, hero) {
   const cv = h('canvas', { class: cls || '' });
-  const v = makeView(ent, equip || {}, face === -1 ? 'R' : 'L', 0, 0);
-  attachPreview(cv, () => v, { zoom: 1.2, cy: -126 });
+  const v = heroView(makeView(ent, equip || {}, face === -1 ? 'R' : 'L', 0, 0), hero);
+  attachPreview(cv, () => v, v.sprite ? { zoom: 1.4, cy: -136, dx: -27 } : { zoom: 1.2, cy: -126 });
   return cv;
 }
-function fullPreview(ent, equip, face, cls, zoom) {
+function fullPreview(ent, equip, face, cls, zoom, hero) {
   const cv = h('canvas', { class: cls || '' });
-  const v = makeView(ent, equip || {}, face === -1 ? 'R' : 'L', 0, 0);
+  const v = heroView(makeView(ent, equip || {}, face === -1 ? 'R' : 'L', 0, 0), hero);
   attachPreview(cv, () => v, { zoom: (zoom || 1) * .49, dy: 10 });
   cv._view = v;
   return cv;

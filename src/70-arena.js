@@ -343,6 +343,7 @@ class FightPlayer {
     this.freeze = 0; this.flashes = []; this.zoom = 0; this.zf = [AW / 2, GROUND - 90]; this.callout = null;
     this.v = {};
     this.v.L = makeView(o.heroEnt, o.heroEquip, 'L', HOME_L, GROUND); this.v.L.name = o.heroEnt.name;
+    this.setHeroSprite(o.heroSprite);
     this.v.R = makeView(o.enemy, o.enemy.equip, 'R', HOME_R, GROUND); this.v.R.name = o.enemy.name;
     (o.heroPets || []).filter(Boolean).forEach((p, i) => { const q = PET_SLOTS_POS[i]; const v = makePetView(p, 'L', HOME_L + q[0], GROUND + q[1]); v.name = p.name; this.v['L' + (i + 1)] = v; });
     (o.enemy.pets || []).forEach((p, i) => { const q = PET_SLOTS_POS[i]; const v = makePetView(p, 'R', HOME_R - q[0], GROUND + q[1]); v.name = p.name; this.v['R' + (i + 1)] = v; });
@@ -354,6 +355,7 @@ class FightPlayer {
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
   }
+  setHeroSprite(on) { const v = this.v.L; v.sprite = on ? SPRITE_SWORDSMAN : null; if (on) spriteImg(SPRITE_SWORDSMAN); }
   wait(ms) { if (this.skipped) return Promise.resolve(); return new Promise(res => this.waits.push({ at: this.clock + ms, res })); }
   tween(obj, key, to, ms, ease) {
     if (this.skipped) { obj[key] = to; return Promise.resolve(); }
@@ -779,7 +781,7 @@ class FightPlayer {
     setPose(H, 'idle', 10);
     for (const id in this.v) if (id[0] === 'R' && !this.v[id].pose.rot) setPose(this.v[id], 'idle', 10);
   }
-  reach(A, D) { return (A.kind === 'pet' ? 34 : 52 + WEAPONS[A.gear.weapon].reach * .6) + (D.kind === 'pet' ? -6 : 0) + (D.boss ? 10 : 0); }
+  reach(A, D) { return (A.sprite ? 74 : A.kind === 'pet' ? 34 : 52 + WEAPONS[A.gear.weapon].reach * .6) + (D.sprite ? 10 : 0) + (D.kind === 'pet' ? -6 : 0) + (D.boss ? 10 : 0); }
   async playWindup(s) {
     const A = this.v[s.a], D = this.v[s.d];
     const reach = this.reach(A, D), tx = D.x - A.face * reach, ty = D.y + (D.kind === 'pet' ? -2 : 1);
