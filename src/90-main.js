@@ -671,7 +671,8 @@ function tabHero() {
   const used = STAT_KEYS.reduce((a, k) => a + alloc[k], 0), left = S.hero.points - used;
   const preview = { ...S.hero, base: { ...S.hero.base } }; for (const k of STAT_KEYS) preview.base[k] += alloc[k];
   const st0 = heroStats(), st = computeStats(preview, S.equip);
-  sc.append(h('div', { class: 'panel' },
+  sc.classList.add('duo'); // tablette paysage : panneaux sur 2 colonnes
+  sc.append(h('div', { class: 'panel half' },
     h('div', { class: 'hero-card' },
       fullPreview(S.hero, S.equip, 1, '', 1.1, true),
       h('div', { class: 'col', style: { gap: '4px', minWidth: 0 } },
@@ -699,7 +700,7 @@ function tabHero() {
       h('span', { class: 'val num' }, S.hero.base[k] + alloc[k], gear ? h('small', null, ` +${gear}`) : null, alloc[k] ? h('em', null, ` (+${alloc[k]})`) : null),
       h('button', { class: 'pm plus', 'aria-label': 'Ajouter', disabled: left <= 0, onclick: () => { alloc[k]++; Sfx.play('tap'); render(); } }, icon('plus', 18))));
   }
-  sc.append(h('div', { class: 'panel col' },
+  sc.append(h('div', { class: 'panel col half' },
     h('div', { class: 'row' }, h('span', { class: 'label grow' }, 'Statistiques'), h('span', { class: 'chip' + (left ? ' hot' : '') }, `${left} point${left > 1 ? 's' : ''} libre${left > 1 ? 's' : ''}`)),
     rows,
     S.hero.points ? h('div', { class: 'row' },
@@ -708,7 +709,7 @@ function tabHero() {
       used ? h('button', { class: 'btn btn-sm btn-gold grow', onclick: commitAlloc }, `Valider ${used} point${used > 1 ? 's' : ''}`) : null) : null));
   const d = (k, a, b, f) => h('div', null, h('span', null, k), h('b', { class: 'num' }, f(b), a !== b ? h('small', { class: b > a ? 'delta-up' : 'delta-down' }, ' ' + (b > a ? '▲' : '▼')) : null));
   const p1 = v => pct(v), r0 = v => fmt(v);
-  sc.append(h('div', { class: 'panel' }, h('div', { class: 'label', style: { marginBottom: '6px' } }, 'Au combat'),
+  sc.append(h('div', { class: 'panel half' }, h('div', { class: 'label', style: { marginBottom: '6px' } }, 'Au combat'),
     h('div', { class: 'derived' },
       d('PV max', st0.maxHp, st.maxHp, r0), d('Dégâts', Math.round(st0.dmg), Math.round(st.dmg), r0), d('Armure', st0.armor, st.armor, r0), d('Vitesse', st0.speed, st.speed, v => round1(v).toString().replace('.', ',')),
       d('Esquive', st0.evade, st.evade, p1), d('Critique', st0.crit, st.crit, p1), d('Enchaînement', st0.combo, st.combo, p1), d('Parade', st0.block, st.block, p1))));
@@ -784,7 +785,7 @@ function choicePanel() {
       S.hero.choices--; S.pendingChoice = null; save(); Sfx.play('level'); toast(L.title); render();
     } }, c.type === 'pet' ? petPreview({ species: c.species, rarity: c.rarity, ilvl: 1 }, 1, 'cardpet', 1.4) : null, h('span', { class: 'k' }, L.sub), h('b', null, L.title), h('p', null, L.desc)));
   });
-  return h('div', { class: 'panel col choice' }, h('div', { class: 'row' }, icon('xp', 22), h('b', { class: 'grow', style: { fontFamily: 'var(--f-display)', fontWeight: 400, fontSize: '19px' } }, 'Choix de la Brute'), S.hero.choices > 1 ? h('span', { class: 'chip' }, `${S.hero.choices} en attente`) : null),
+  return h('div', { class: 'panel col choice half' }, h('div', { class: 'row' }, icon('xp', 22), h('b', { class: 'grow', style: { fontFamily: 'var(--f-display)', fontWeight: 400, fontSize: '19px' } }, 'Choix de la Brute'), S.hero.choices > 1 ? h('span', { class: 'chip' }, `${S.hero.choices} en attente`) : null),
     h('div', { style: { fontSize: '13px', color: 'var(--muted-ink)' } }, `Tous les ${CHOICE_EVERY} niveaux, 2 bonus sont tirés au hasard (pouvoir, familier, PV ou points). Tu en gardes un.`), cards);
 }
 function openSaveIO() {
@@ -810,7 +811,7 @@ function confirmReset() {
 
 /* ---------- Onglet Sac ---------- */
 function tabBag() {
-  const sc = h('div', { class: 'scroll' });
+  const sc = h('div', { class: 'scroll duo' });
   // aperçu exact de « Tout optimiser » : simulé sur une copie de la partie
   let prev = null;
   if (upgrades().length || junk().length) { const snap = JSON.stringify(S); prev = optimizeAll(2); S = JSON.parse(snap); }
@@ -819,7 +820,7 @@ function tabBag() {
   if (S.run && S.run.loot.length) sc.append(h('div', { class: 'panel col' }, h('div', { class: 'row' }, icon('lock', 18), h('span', { class: 'label grow' }, `Butin du run · en jeu`)),
     h('div', { class: 'grid' }, S.run.loot.map(it => itemTile(it, { delta: deltaFor(it), onclick: () => openItem(it, null, true) })))));
   const slot = (key, label, ei) => h('div', null, itemTile(S.equip[key], { empty: label, emptyIcon: ei, onclick: () => S.equip[key] && openItem(S.equip[key], key) }), h('div', { class: 'slotlab' }, label));
-  sc.append(h('div', { class: 'panel col' }, h('div', { class: 'label' }, 'Équipé'),
+  sc.append(h('div', { class: 'panel col half' }, h('div', { class: 'label' }, 'Équipé'),
     h('div', { class: 'slots' }, slot('weapon', 'Arme', 'poings'), slot('armor', 'Armure', 'cuir'), slot('tal1', 'Talisman', 'amulette'), slot('tal2', 'Talisman', 'anneau'))));
   const nSlots = petSlots(S.hero.level);
   const petSlot = i => {
@@ -827,7 +828,7 @@ function tabBag() {
     const p = S.pets[i];
     return h('div', null, p ? h('button', { class: 'tile petslot', style: { '--rbg': rarityBg(p.rarity) }, onclick: () => openItem(p, 'pet' + i) }, petPreview(p, 1, 'petcv', 1.5), h('span', { class: 'lv num' }, p.ilvl)) : itemTile(null, { empty: 'Familier', emptyIcon: 'paw' }), h('div', { class: 'slotlab' }, p ? PETS[p.species].name : 'Libre'));
   };
-  sc.append(h('div', { class: 'panel col' }, h('div', { class: 'label' }, 'Familiers'), h('div', { class: 'slots three' }, petSlot(0), petSlot(1), petSlot(2))));
+  sc.append(h('div', { class: 'panel col half' }, h('div', { class: 'label' }, 'Familiers'), h('div', { class: 'slots three' }, petSlot(0), petSlot(1), petSlot(2))));
   const inv = S.inv.slice().sort((a, b) => (b.slot === 'pet') - (a.slot === 'pet') || b.rarity - a.rarity || b.ilvl - a.ilvl);
   sc.append(h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'label num' }, `Sac · ${S.inv.length} / ${INV_MAX}`)));
   if (inv.length) sc.append(h('div', { style: { fontSize: '12px', color: 'var(--muted-ink)' } }, h('b', { class: 'delta-up' }, '▲ +N'), ' = gain de puissance si tu l\'équipes. ▼ = moins bon que ce que tu portes.'));

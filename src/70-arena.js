@@ -1,4 +1,5 @@
 /* ===== ARÈNE : un monde gothique par palier, effets, lecteur de combat interactif ===== */
+const VIEW_H = 430; // hauteur de monde visible en paysage (combattants bien lisibles sans rogner le sol)
 const AW = 400, AH = 280, GROUND = 238, EXT = 440, BOT = 300, FLOOR_BACK = 192, LEDGE = 292;
 const tierIdx = floor => Math.min(TIERS.length - 1, Math.floor((floor - 1) / 10));
 const tierOf = floor => TIERS[tierIdx(floor)];
@@ -480,8 +481,9 @@ class FightPlayer {
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
     const c = cv.getContext('2d'), T = this.tier;
     const cw = cv.width, ch = cv.height, gr = this.o.groundAt || .64;
-    /* cadrage portrait plein écran : 82% de la largeur du monde, sol à ~64% de la hauteur */
-    let s = Math.max(cw / (AW * .82), gr * ch / (GROUND + EXT - 20), (1 - gr) * ch / (AH + BOT - GROUND - 10));
+    /* cadrage plein écran : en portrait, 82% de la largeur du monde ; en paysage (tablette, ordinateur),
+       la hauteur prime (~VIEW_H unités visibles) et le décor est prolongé en miroir sur les côtés. Sol à ~64% de la hauteur */
+    let s = Math.max(Math.min(cw / (AW * .82), ch / VIEW_H), gr * ch / (GROUND + EXT - 20), (1 - gr) * ch / (AH + BOT - GROUND - 10));
     let ox = (cw - AW * s) / 2, oy = ch * gr - GROUND * s;
     // coup de zoom sur l'impact (tenu pendant l'arrêt sur image, puis relâché)
     if (this.zoom > .002) { const [fx, fy] = this.zf, px = ox + fx * s, py = oy + fy * s; s *= 1 + this.zoom; ox = px - fx * s; oy = py - fy * s; }
@@ -493,13 +495,22 @@ class FightPlayer {
     this.tf = [s, ox + sx * s, oy + sy * s];
     c.setTransform(s, 0, 0, s, this.tf[1], this.tf[2]);
     const lay = arenaLayers(this.o.floor, Math.max(1, Math.round(s)));
-    c.drawImage(lay.back, -4, -EXT - 4, AW + 8, AH + EXT + BOT + 8);
+    // bande visible du monde : au-delà de [0, AW], copies du décor en miroir (raccord invisible)
+    const xl = -this.tf[1] / s, xr = (cw - this.tf[1]) / s, wings = [];
+    for (let k = 1; xl < -k * AW + AW || xr > k * AW; k++) wings.push(-k, k);
+    const layer = img => {
+      c.drawImage(img, -4, -EXT - 4, AW + 8, AH + EXT + BOT + 8);
+      for (const k of wings) { c.save(); c.translate(k * AW + (k % 2 ? AW : 0), 0); if (k % 2) c.scale(-1, 1); c.drawImage(img, -4, -EXT - 4, AW + 8, AH + EXT + BOT + 8); c.restore(); }
+    };
+    layer(lay.back);
+    const sl = Math.min(-60, xl - 60), sr = Math.max(AW + 60, xr + 60);
     for (const sh of this.ships) {
-      sh.x += sh.v * dt; if (sh.x > AW + 60) sh.x = -60; if (sh.x < -60) sh.x = AW + 60;
+      sh.x += sh.v * dt; if (sh.x > sr) sh.x = sl; if (sh.x < sl) sh.x = sr;
       drawShip(c, sh.x, sh.y + Math.sin(now / 1400 + sh.s * 9) * 3, sh.s, mix(T.far, '#000000', .25 - sh.s * .1), T.glow, sh.v > 0 ? 1 : -1);
     }
-    c.drawImage(lay.front, -4, -EXT - 4, AW + 8, AH + EXT + BOT + 8);
+    layer(lay.front);
     this.drawMotes(c, now, dt);
+    for (const k of wings) { c.save(); c.translate(k * AW, 0); this.drawMotes(c, now, 0); c.restore(); }
     RIM = T.rim;
     // auras : bouclier (cyan) et coup dévastateur chargé (rose), derrière le héros
     const hv = this.v.L, U = this.F && this.F.U;

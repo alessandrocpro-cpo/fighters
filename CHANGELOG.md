@@ -3,7 +3,13 @@
 Règle : chaque version livrée part en même temps sur la page de test Claude (artefact) et sur GitHub : push sur `main` et `release` (GitHub Pages), plus un tag git `vX.Y.Z`. Chaque version incrémente `GAME_VERSION` (src/00-core.js) et ajoute une entrée ici.
 
 ## Non publié (en cours)
-- (rien)
+Tablette (iPad) et grand écran, en portrait comme en paysage.
+- L'app prend tout l'écran au-delà de 700 × 560 px (avant : colonne de 480 px au centre). Un téléphone, même en paysage, garde la colonne mobile
+- Portrait : contenu en colonne centrée élargie (720 px), portraits, aperçu de création et grilles agrandis (sac et collection en colonnes auto)
+- Paysage (≥ 900 px) : navigation en rail à gauche, Héros (stats) et Sac sur 2 colonnes, Tour en colonne de 760 px
+- Combat paysage : cadrage calé sur la hauteur (`VIEW_H`, 70-arena), décor prolongé en miroir sur les côtés (dirigeables et particules compris), HUD et commandes centrés
+- Fenêtres (butin, pause, tutoriel) centrées et limitées à 560 px de large
+- Hauteur en `100dvh` quand le navigateur le gère (barres Safari)
 
 ## 0.9.0 — release publique (2026-11-23)
 Tutoriel, sorts lisibles, familiers peints, tour plus longue.
