@@ -5,6 +5,11 @@ Règle : chaque version livrée part en même temps sur la page de test Claude (
 ## 0.9.1 — release publique (2026-11-23)
 Tablette, grand écran et téléphone en paysage ; techniques automatiques expliquées.
 
+Vérification du 2026-11-24 (aucun changement de jeu) :
+- Artefact republié : il affichait « 0.9.0 » alors qu'il contenait déjà la 0.9.1
+- Tags git `v0.9.0` et `v0.9.1` ajoutés (ils manquaient)
+- Dossier de travail local remis à jour depuis `main` (il était resté en 0.8.1)
+
 Techniques automatiques expliquées.
 - Tutoriel : la carte « Technique prête » prévient qu'à 100 de rage les techniques partent toutes seules ; nouvelle carte « Lancement automatique » la première fois que ça arrive
 - Options : « Techniques auto à rage pleine : oui / non »
