@@ -9,6 +9,7 @@ Vérification du 2026-11-24 (aucun changement de jeu) :
 - Artefact republié : il affichait « 0.9.0 » alors qu'il contenait déjà la 0.9.1
 - Tags git `v0.9.0` et `v0.9.1` ajoutés (ils manquaient)
 - Dossier de travail local remis à jour depuis `main` (il était resté en 0.8.1)
+- Branches temporaires `claude/exciting-meitner-d20wgf` et `claude/practical-mendel-m3xrec` supprimées (leur contenu est dans `main`)
 
 Techniques automatiques expliquées.
 - Tutoriel : la carte « Technique prête » prévient qu'à 100 de rage les techniques partent toutes seules ; nouvelle carte « Lancement automatique » la première fois que ça arrive
